@@ -18,6 +18,7 @@ export default function LeagueDetail() {
   const [news, setNews] = useState([]);
   const [predictions, setPredictions] = useState(null);
   const [recentGames, setRecentGames] = useState([]);
+  const [nextGame, setNextGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [simming, setSimming] = useState(false);
   const [headlineIdx, setHeadlineIdx] = useState(0);
@@ -64,6 +65,19 @@ export default function LeagueDetail() {
             const gamesSnap = await getDocs(query(seasonGamesCol(seasonData.id), orderBy('playedAt', 'desc'), limit(5)));
             setRecentGames(gamesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
           } catch (e) { console.error('games query:', e); }
+
+          try {
+            const userTeamSnap = await getDocs(query(teamsCol(), where('leagueId', '==', id), where('userId', '==', user?.id)));
+            if (!userTeamSnap.empty) {
+              const utId = userTeamSnap.docs[0].id;
+              const allGamesSnap = await getDocs(seasonGamesCol(seasonData.id));
+              const teamGames = allGamesSnap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(g => g.isCompleted !== 1 && (g.homeTeamId === utId || g.awayTeamId === utId))
+                .sort((a, b) => (a.week || 0) - (b.week || 0));
+              if (teamGames.length > 0) setNextGame(teamGames[0]);
+            }
+          } catch (e) { console.error('nextGame query:', e); }
         }
       } catch (e) { console.error('season query:', e); }
 
@@ -196,7 +210,7 @@ export default function LeagueDetail() {
       {/* ── Team Header ── */}
       <div className="glass-card p-4 bg-gradient-to-br from-[var(--bg-card)] via-[var(--bg-card)] to-[var(--accent-orange)]/5 relative overflow-hidden animate-fade-up">
         <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-[var(--accent-orange)]/8 to-transparent rounded-full blur-3xl" />
-        <div className="flex items-start gap-4 relative z-10">
+        <div className="flex items-start gap-3 relative z-10">
           {userTeam ? (
             <>
               <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-xl font-bold font-display text-white shadow-lg relative shrink-0"
@@ -231,6 +245,41 @@ export default function LeagueDetail() {
                 <div className="mt-2 h-1 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
                   <div className="h-full bg-gradient-to-r from-[#ff6b35] to-[#ff2d55] rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (userOvr || 50))}%` }} />
                 </div>
+              </div>
+
+              <div className="shrink-0 w-32">
+                <p className="text-[10px] text-[var(--accent-orange)] font-semibold tracking-wider uppercase mb-1.5">Next Game</p>
+                {(() => {
+                  if (nextGame) {
+                    const oppId = nextGame.homeTeamId === userTeam?.id ? nextGame.awayTeamId : nextGame.homeTeamId;
+                    const opp = teams.find(t => t.id === oppId);
+                    const isHome = nextGame.homeTeamId === userTeam?.id;
+                    return (
+                      <div className="bg-[var(--bg-secondary)] rounded-xl p-2 text-center space-y-1">
+                        <div className="flex items-center justify-center gap-1">
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[8px] font-bold text-white"
+                            style={{ background: userTeam.primaryColor || '#ff6b35' }}>
+                            {userTeam.abbreviation || userTeam.name?.slice(0, 2).toUpperCase()}
+                          </div>
+                          <span className="text-[10px] text-[var(--text-tertiary)] font-bold">VS</span>
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[8px] font-bold text-white"
+                            style={{ background: opp?.primaryColor || '#ff6b35' }}>
+                            {opp?.abbreviation || opp?.name?.slice(0, 2).toUpperCase() || '??'}
+                          </div>
+                        </div>
+                        <p className="text-[9px] text-[var(--text-secondary)] font-medium truncate">{opp?.name || 'TBD'}</p>
+                        <p className="text-[9px] text-[var(--text-tertiary)]">{isHome ? 'vs' : '@'} {opp?.name || 'TBD'}</p>
+                        <p className="text-[9px] text-[var(--text-tertiary)]">Week {nextGame.week || '?'}</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="bg-[var(--bg-secondary)] rounded-xl p-2 text-center space-y-1 flex flex-col items-center justify-center min-h-[90px]">
+                      <p className="text-[10px] text-[var(--text-tertiary)]">No game</p>
+                      <p className="font-display text-base tracking-wider text-[var(--text-secondary)]">TBD</p>
+                    </div>
+                  );
+                })()}
               </div>
             </>
           ) : (
