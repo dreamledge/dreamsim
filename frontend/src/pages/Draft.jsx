@@ -55,34 +55,38 @@ export default function Draft() {
   };
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold">🏀 Player Draft</h2>
-      <p className="text-gray-500 text-sm">Draft new players to fill out your roster</p>
+    <div className="space-y-4 stagger">
+      <h2 className="font-display text-3xl tracking-wider animate-fade-up">Player Draft</h2>
+      <p className="text-[var(--text-secondary)] text-sm animate-fade-up">Draft new players to fill out your roster</p>
 
       {loading ? (
-        <div className="flex justify-center py-8"><div className="animate-spin h-6 w-6 border-2 border-[#e94560] border-t-transparent rounded-full" /></div>
+        <div className="flex justify-center py-12">
+          <div className="relative loader-2k" />
+        </div>
       ) : userTeams.length === 0 ? (
-        <div className="bg-[#16213e] rounded-xl p-6 text-center">
-          <p className="text-gray-500">Create a team first</p>
-          <Link to="/teams/create" className="text-[#e94560] text-sm mt-2 inline-block">Create Team →</Link>
+        <div className="glass-card p-8 text-center animate-scale-in">
+          <p className="text-[var(--text-secondary)] mb-3">Create a team first</p>
+          <Link to="/teams/create" className="text-[var(--accent-orange)] font-medium text-sm hover:text-white transition-colors">Create Team →</Link>
         </div>
       ) : (
         <>
-          <div className="bg-[#16213e] rounded-xl p-4">
-            <select value={selectedTeamId || ''} onChange={e => setSelectedTeamId(e.target.value)} className="w-full bg-[#1a1a2e] border border-gray-700 rounded-lg px-3 py-2 text-white">
+          <div className="glass-card p-4 animate-fade-up">
+            <select value={selectedTeamId || ''} onChange={e => setSelectedTeamId(e.target.value)} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[var(--accent-orange)] transition-all">
               <option value="">Select a team</option>
               {userTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
           </div>
-          <button onClick={handleDraft} disabled={drafting || !selectedTeamId} className="w-full bg-[#e94560] text-white rounded-lg py-3 font-semibold hover:bg-[#d63851] transition disabled:opacity-50 text-lg">
-            {drafting ? 'Drafting...' : '✍️ Draft Players'}
+
+          <button onClick={handleDraft} disabled={drafting || !selectedTeamId} className="btn-glow w-full py-3 text-sm tracking-wide disabled:opacity-50">
+            {drafting ? '✍️ Drafting...' : '✍️ Draft Players'}
           </button>
-          <div className="bg-[#16213e] rounded-xl p-4">
-            <h3 className="font-semibold mb-2">Draft Rules</h3>
-            <ul className="text-sm text-gray-500 space-y-1">
-              <li>• Each draft gives you up to 5 new players</li>
-              <li>• Max roster size is 15 players</li>
-              <li>• Players have potential that can grow over seasons</li>
+
+          <div className="glass-card p-4 animate-slide-up">
+            <h3 className="font-display text-lg tracking-wider mb-2">Draft Rules</h3>
+            <ul className="text-sm text-[var(--text-tertiary)] space-y-1.5">
+              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-orange)] flex-shrink-0" />Each draft gives you up to 5 new players</li>
+              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-orange)] flex-shrink-0" />Max roster size is 15 players</li>
+              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-orange)] flex-shrink-0" />Players have potential that can grow over seasons</li>
             </ul>
           </div>
         </>

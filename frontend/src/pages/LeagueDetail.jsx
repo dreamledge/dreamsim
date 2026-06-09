@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { doc, getDoc, getDocs, collection, query, where, orderBy, limit, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { uid, leagueDoc, teamsCol, teamPlayersCol, seasonDoc, seasonGamesCol, leagueNewsCol, championshipsCol } from '../lib/firestore';
+import { uid, leagueDoc, teamsCol, teamPlayersCol, seasonDoc, seasonGamesCol, leagueNewsCol, championshipsCol, championshipDoc, leagueNewsDoc } from '../lib/firestore';
 import { generateSchedule, simulateGame } from '../engine/gameEngine';
 import { generateSeasonPrediction, generateStory } from '../engine/aiEngine';
 
@@ -146,84 +146,89 @@ export default function LeagueDetail() {
   const userTeam = teams.find(t => t.userId === user?.id);
   const isCommissioner = league?.commissionerId === user?.id;
 
-  if (loading) return <div className="flex justify-center py-8"><div className="animate-spin h-6 w-6 border-2 border-[#e94560] border-t-transparent rounded-full" /></div>;
+  if (loading) return (
+    <div className="flex justify-center py-12">
+      <div className="relative loader-2k" />
+    </div>
+  );
   if (!league) return null;
 
   return (
-    <div className="space-y-4">
-      <div className="bg-[#16213e] rounded-xl p-5">
-        <h2 className="text-xl font-bold">{league.name}</h2>
-        <p className="text-gray-500 text-sm">{league.description}</p>
-        <div className="flex flex-wrap gap-2 mt-3">
-          <span className="bg-[#1a1a2e] text-xs px-2 py-1 rounded">Season {league.currentSeason}</span>
-          <span className="bg-[#1a1a2e] text-xs px-2 py-1 rounded">{teams.length} teams</span>
-          <span className="bg-[#1a1a2e] text-xs px-2 py-1 rounded">Week {season?.currentWeek || 0}/{season?.totalWeeks || 24}</span>
-          {season?.status === 'playoffs' && <span className="bg-yellow-500/20 text-yellow-500 text-xs px-2 py-1 rounded">PLAYOFFS</span>}
-          {season?.status === 'completed' && <span className="bg-green-500/20 text-green-500 text-xs px-2 py-1 rounded">SEASON OVER</span>}
+    <div className="space-y-4 stagger">
+      <div className="glass-card p-5 bg-gradient-to-br from-[var(--bg-card)] via-[var(--bg-card)] to-[#ff6b35]/5 relative overflow-hidden animate-fade-up">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#ff6b35]/10 to-transparent rounded-full blur-2xl" />
+        <h2 className="font-display text-3xl tracking-wider">{league.name}</h2>
+        <p className="text-[var(--text-secondary)] text-sm">{league.description}</p>
+        <div className="flex flex-wrap gap-2 mt-4">
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs px-3 py-1 rounded-full font-medium">Season {league.currentSeason}</div>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs px-3 py-1 rounded-full font-medium">{teams.length} teams</div>
+          <div className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs px-3 py-1 rounded-full font-medium">Week {season?.currentWeek || 0}/{season?.totalWeeks || 24}</div>
+          {season?.status === 'playoffs' && <div className="badge bg-yellow-500/20 text-yellow-500 border border-yellow-500/20">Playoffs</div>}
+          {season?.status === 'completed' && <div className="badge bg-green-500/20 text-[var(--accent-green)] border border-green-500/20">Season Over</div>}
         </div>
       </div>
 
-      {!userTeam && (
-        <div className="bg-[#16213e] rounded-xl p-5 text-center">
-          <p className="text-gray-400 mb-3">You don't have a team in this league yet</p>
-          <Link to={`/teams/create?league=${id}`} className="bg-[#e94560] text-white px-4 py-2 rounded-lg text-sm font-semibold inline-block">Create Team</Link>
+      {!userTeam ? (
+        <div className="glass-card p-6 text-center animate-scale-in">
+          <p className="text-[var(--text-secondary)] mb-4">You don't have a team in this league yet</p>
+          <Link to={`/teams/create?league=${id}`} className="btn-glow inline-block px-5 py-2.5 text-sm">Create Team</Link>
         </div>
-      )}
-
-      {userTeam && (
-        <div className="bg-[#16213e] rounded-xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold">Your Team</h3>
-            <Link to={`/teams/${userTeam.id}`} className="text-sm text-[#e94560]">Manage →</Link>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold" style={{ backgroundColor: userTeam.primaryColor || '#1a1a2e' }}>
-              {userTeam.abbreviation || userTeam.name?.slice(0, 2).toUpperCase()}
+      ) : (
+        <div className="glass-card p-4 hover:bg-[var(--bg-tertiary)] transition-all duration-200">
+          <Link to={`/teams/${userTeam.id}`} className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold font-display text-white shadow-md" style={{ backgroundColor: userTeam.primaryColor || '#ff6b35' }}>
+                {userTeam.abbreviation || userTeam.name?.slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <p className="font-semibold">{userTeam.name}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">{userTeam.wins || 0}W - {userTeam.losses || 0}L</p>
+              </div>
             </div>
-            <div>
-              <p className="font-medium">{userTeam.name}</p>
-              <p className="text-xs text-gray-500">{userTeam.wins || 0}W - {userTeam.losses || 0}L</p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--accent-orange)] font-medium">Manage</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accent-orange)]"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
-          </div>
+          </Link>
         </div>
       )}
 
       {season?.status !== 'completed' && userTeam && (
-        <div className="flex gap-2">
-          <button onClick={simWeek} disabled={simming} className="flex-1 bg-[#e94560] text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-[#d63851] transition disabled:opacity-50">
+        <div className="flex gap-2 animate-fade-up">
+          <button onClick={simWeek} disabled={simming} className={`flex-1 btn-glow py-2.5 text-sm ${simming ? 'animate-pulse-glow' : ''}`}>
             {simming ? 'Simming...' : season?.status === 'pregame' ? 'Start Season' : 'Sim Next Week'}
           </button>
-          <button onClick={simAll} disabled={simming} className="flex-1 bg-gray-700 text-white rounded-lg py-2.5 text-sm hover:bg-gray-600 transition disabled:opacity-50">Sim All</button>
+          <button onClick={simAll} disabled={simming} className="flex-1 btn-ghost py-2.5 text-sm">Sim All</button>
         </div>
       )}
 
-      <div className="bg-[#16213e] rounded-xl p-4">
+      <div className="glass-card p-4 animate-slide-up">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Standings</h3>
-          <Link to={`/leagues/${id}/standings`} className="text-sm text-[#e94560]">Full →</Link>
+          <h3 className="font-display text-lg tracking-wider">Standings</h3>
+          <Link to={`/leagues/${id}/standings`} className="text-xs text-[var(--accent-orange)] font-medium hover:text-white transition-colors">Full →</Link>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           {teams.sort((a, b) => (b.wins || 0) - (a.wins || 0)).slice(0, 5).map((team, i) => (
-            <Link key={team.id} to={`/teams/${team.id}`} className="flex items-center gap-2 py-1.5 text-sm hover:bg-[#1a1a2e] px-2 rounded">
-              <span className="w-5 text-center text-gray-500">{i + 1}</span>
+            <Link key={team.id} to={`/teams/${team.id}`} className="flex items-center gap-2 py-2 text-sm hover:bg-[var(--bg-secondary)] px-2 rounded-lg transition-colors group">
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? 'bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] text-white' : 'text-[var(--text-tertiary)]'}`}>{i + 1}</span>
               <span className="font-medium flex-1">{team.name}</span>
-              <span className="text-gray-400">{team.wins || 0}W - {team.losses || 0}L</span>
+              <span className="text-[var(--text-secondary)] text-xs">{team.wins || 0}W - {team.losses || 0}L</span>
             </Link>
           ))}
         </div>
       </div>
 
       {news.length > 0 && (
-        <div className="bg-[#16213e] rounded-xl p-4">
+        <div className="glass-card p-4 animate-slide-up">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold">League News</h3>
-            <Link to={`/leagues/${id}/news`} className="text-sm text-[#e94560]">All →</Link>
+            <h3 className="font-display text-lg tracking-wider">League News</h3>
+            <Link to={`/leagues/${id}/news`} className="text-xs text-[var(--accent-orange)] font-medium hover:text-white transition-colors">All →</Link>
           </div>
           <div className="space-y-2">
             {news.slice(0, 3).map((item, i) => (
-              <div key={i} className="text-sm">
+              <div key={i} className="text-sm py-1 border-l-2 border-[var(--accent-orange)] pl-3">
                 <p className="font-medium">{item.title}</p>
-                <p className="text-xs text-gray-500">{item.body?.slice(0, 60)}...</p>
+                <p className="text-xs text-[var(--text-tertiary)]">{item.body?.slice(0, 60)}...</p>
               </div>
             ))}
           </div>
@@ -231,29 +236,36 @@ export default function LeagueDetail() {
       )}
 
       {championships.length > 0 && (
-        <div className="bg-[#16213e] rounded-xl p-4">
-          <h3 className="font-semibold mb-2">🏆 Champions</h3>
+        <div className="glass-card p-4 animate-slide-up">
+          <h3 className="font-display text-lg tracking-wider mb-3">
+            <span className="text-[var(--accent-yellow)]">🏆</span> Champions
+          </h3>
           <div className="space-y-1 text-sm">
             {championships.map(c => (
-              <p key={c.id} className="text-gray-400">Season {c.seasonNumber}</p>
+              <p key={c.id} className="text-[var(--text-secondary)]">Season {c.seasonNumber}</p>
             ))}
           </div>
         </div>
       )}
 
-      <div className="flex gap-2">
-        {season && <Link to={`/leagues/${id}/season/${season.id}`} className="flex-1 bg-gray-700 text-center rounded-lg py-2 text-sm hover:bg-gray-600 transition">Schedule</Link>}
-        <button onClick={getPredictions} className="flex-1 bg-gray-700 rounded-lg py-2 text-sm hover:bg-gray-600 transition">AI Predictions</button>
+      <div className="flex gap-2 animate-fade-up">
+        {season && <Link to={`/leagues/${id}/season/${season.id}`} className="flex-1 btn-ghost text-center py-2.5 text-sm">Schedule</Link>}
+        <button onClick={getPredictions} className="flex-1 btn-ghost py-2.5 text-sm">AI Predictions</button>
       </div>
 
       {predictions && (
-        <div className="bg-[#16213e] rounded-xl p-4">
-          <h3 className="font-semibold mb-3">🔮 Season Predictions</h3>
-          <div className="space-y-1 text-sm">
+        <div className="glass-card p-4 animate-scale-in">
+          <h3 className="font-display text-lg tracking-wider mb-3">
+            <span className="badge badge-ai mr-2">AI</span> Season Predictions
+          </h3>
+          <div className="space-y-1.5 text-sm">
             {predictions.map((p, i) => (
-              <div key={i} className="flex items-center justify-between py-1">
-                <span>{i + 1}. {p.teamName}</span>
-                <span className="text-gray-500">{p.projectedWins}W · {p.playoffOdds}% playoffs</span>
+              <div key={i} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${i < 3 ? 'text-[var(--accent-orange)]' : 'text-[var(--text-tertiary)]'}`}>{i + 1}</span>
+                  <span>{p.teamName}</span>
+                </div>
+                <span className="text-[var(--text-secondary)] text-xs">{p.projectedWins}W · {p.playoffOdds}% PO</span>
               </div>
             ))}
           </div>

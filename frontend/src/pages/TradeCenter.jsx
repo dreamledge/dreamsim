@@ -16,7 +16,7 @@ export default function TradeCenter() {
   const [myPlayers, setMyPlayers] = useState([]);
   const [targetPlayers, setTargetPlayers] = useState([]);
   const [selectedMy, setSelectedMy] = useState([]);
-  const [selectedTargetPlayers, setSelectedTargetPlayerslayers] = useState([]);
+  const [selectedTargetPlayers, setSelectedTargetPlayers] = useState([]);
   const [analysis, setAnalysis] = useState(null);
 
   useEffect(() => {
@@ -71,45 +71,55 @@ export default function TradeCenter() {
     }
   };
 
-  if (!userTeam) return <div className="bg-[#16213e] rounded-xl p-6 text-center"><p className="text-gray-500">You need a team in this league first.</p></div>;
+  if (!userTeam) return <div className="glass-card p-6 text-center"><p className="text-[var(--text-secondary)]">You need a team in this league first.</p></div>;
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold">🤝 Trade Center</h2>
+    <div className="space-y-4 stagger">
+      <h2 className="font-display text-3xl tracking-wider animate-fade-up">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline mr-2 -mt-1"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+        Trade Center
+      </h2>
 
-      <div className="bg-[#16213e] rounded-xl p-4">
-        <h3 className="font-semibold mb-2">Your Team: {userTeam.name}</h3>
-        <div className="space-y-1 max-h-40 overflow-y-auto">
+      <div className="glass-card p-4 animate-fade-up">
+        <h3 className="font-display text-lg tracking-wider mb-2">Your Team: {userTeam.name}</h3>
+        <div className="space-y-1 max-h-44 overflow-y-auto custom-scrollbar">
           {myPlayers.map(p => (
-            <label key={p.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer">
-              <input type="checkbox" checked={selectedMy.includes(p.id)} onChange={() => toggleMy(p.id)} className="accent-[#e94560]" />
+            <label key={p.id} className="flex items-center gap-2.5 text-sm py-1.5 px-2 rounded-lg hover:bg-[var(--bg-secondary)] cursor-pointer transition-colors">
+              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${selectedMy.includes(p.id) ? 'bg-[var(--accent-orange)] border-[var(--accent-orange)]' : 'border-[var(--text-tertiary)]'}`}>
+                {selectedMy.includes(p.id) && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              </div>
               <span>{p.firstName} {p.lastName} ({p.position})</span>
-              <span className="text-gray-500 ml-auto">OVR {p.overall}</span>
+              <span className="text-[var(--text-tertiary)] ml-auto text-xs">OVR {p.overall}</span>
             </label>
           ))}
         </div>
       </div>
 
-      <div className="bg-[#16213e] rounded-xl p-4">
-        <h3 className="font-semibold mb-2">Target Team</h3>
+      <div className="glass-card p-4 animate-fade-up">
+        <h3 className="font-display text-lg tracking-wider mb-2">Target Team</h3>
         <div className="space-y-1">
           {teams.filter(t => t.id !== userTeam.id).map(t => (
-            <button key={t.id} onClick={() => selectTarget(t.id)} className={`w-full text-left px-3 py-2 rounded-lg text-sm ${selectedTarget === t.id ? 'bg-[#e94560] text-white' : 'bg-[#1a1a2e] text-gray-300 hover:bg-gray-700'}`}>
-              {t.name} ({t.wins || 0}W - {t.losses || 0}L)
+            <button key={t.id} onClick={() => selectTarget(t.id)} className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all ${
+              selectedTarget === t.id ? 'bg-gradient-to-r from-[#ff6b35] to-[#ff2d55] text-white shadow-md' : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+            }`}>
+              <span className="font-medium">{t.name}</span>
+              <span className="text-xs ml-2 opacity-70">({t.wins || 0}W - {t.losses || 0}L)</span>
             </button>
           ))}
         </div>
       </div>
 
       {selectedTarget && targetPlayers.length > 0 && (
-        <div className="bg-[#16213e] rounded-xl p-4">
-          <h3 className="font-semibold mb-2">Target Players</h3>
-          <div className="space-y-1 max-h-40 overflow-y-auto">
+        <div className="glass-card p-4 animate-slide-up">
+          <h3 className="font-display text-lg tracking-wider mb-2">Target Players</h3>
+          <div className="space-y-1 max-h-44 overflow-y-auto">
             {targetPlayers.map(p => (
-              <label key={p.id} className="flex items-center gap-2 text-sm py-1 cursor-pointer">
-                <input type="checkbox" checked={selectedTargetPlayers.includes(p.id)} onChange={() => toggleTarget(p.id)} className="accent-[#e94560]" />
+              <label key={p.id} className="flex items-center gap-2.5 text-sm py-1.5 px-2 rounded-lg hover:bg-[var(--bg-secondary)] cursor-pointer transition-colors">
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${selectedTargetPlayers.includes(p.id) ? 'bg-[var(--accent-orange)] border-[var(--accent-orange)]' : 'border-[var(--text-tertiary)]'}`}>
+                  {selectedTargetPlayers.includes(p.id) && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                </div>
                 <span>{p.firstName} {p.lastName} ({p.position})</span>
-                <span className="text-gray-500 ml-auto">OVR {p.overall}</span>
+                <span className="text-[var(--text-tertiary)] ml-auto text-xs">OVR {p.overall}</span>
               </label>
             ))}
           </div>
@@ -117,20 +127,30 @@ export default function TradeCenter() {
       )}
 
       {(selectedMy.length > 0 || selectedTargetPlayers.length > 0) && (
-        <div className="flex gap-2">
-          <button onClick={analyze} className="flex-1 bg-gray-700 rounded-lg py-2.5 text-sm font-semibold hover:bg-gray-600 transition">🤖 AI Analyze</button>
-          <button onClick={submitTrade} className="flex-1 bg-[#e94560] text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-[#d63851] transition">Propose Trade</button>
+        <div className="flex gap-2 animate-fade-up">
+          <button onClick={analyze} className="flex-1 btn-ghost py-2.5 text-sm flex items-center justify-center gap-2">
+            <span className="badge badge-ai">AI</span> Analyze
+          </button>
+          <button onClick={submitTrade} className="flex-1 btn-glow py-2.5 text-sm">Propose Trade</button>
         </div>
       )}
 
       {analysis && (
-        <div className="bg-[#16213e] rounded-xl p-4 border-l-4" style={{ borderColor: analysis.score > 50 ? '#4ade80' : '#e94560' }}>
-          <h3 className="font-semibold mb-2">📊 Trade Analysis</h3>
-          <div className="flex items-center gap-2">
-            <span className={`text-lg font-bold ${analysis.score > 50 ? 'text-green-400' : 'text-red-400'}`}>{analysis.verdict}</span>
-            <span className="text-sm text-gray-500">({analysis.score}/100)</span>
+        <div className="glass-card p-4 animate-scale-in" style={{borderLeft: `3px solid ${analysis.score > 50 ? 'var(--accent-green)' : 'var(--accent-red)'}`}}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="badge badge-ai">AI</span>
+            <h3 className="font-display text-lg tracking-wider">Trade Analysis</h3>
           </div>
-          <p className="text-sm text-gray-400 mt-1">{analysis.explanation}</p>
+          <div className="flex items-center gap-3">
+            <span className={`font-display text-2xl ${analysis.score > 50 ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]'}`}>{analysis.verdict}</span>
+            <div className="flex items-center gap-1.5">
+              <div className="h-2 w-24 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${analysis.score > 50 ? 'bg-[var(--accent-green)]' : 'bg-[var(--accent-red)]'}`} style={{width: `${Math.abs(analysis.score)}%`}} />
+              </div>
+              <span className="text-xs text-[var(--text-tertiary)]">{analysis.score}/100</span>
+            </div>
+          </div>
+          <p className="text-sm text-[var(--text-secondary)] mt-2">{analysis.explanation}</p>
         </div>
       )}
     </div>

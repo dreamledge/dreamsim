@@ -84,40 +84,47 @@ export default function CreateTeam() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold">Create Team</h2>
-      <form onSubmit={handleSubmit} className="bg-[#16213e] rounded-xl p-5 space-y-4">
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+      <h2 className="font-display text-3xl tracking-wider animate-fade-up">Create Team</h2>
+      <form onSubmit={handleSubmit} className="glass-card p-5 space-y-4 animate-slide-up">
+        {error && <p className="text-[var(--accent-red)] text-sm bg-[var(--accent-red)]/10 rounded-lg py-2 px-3">{error}</p>}
+
         <div>
-          <label className="text-sm text-gray-400 block mb-1">League ID</label>
-          <input type="text" value={form.leagueId} onChange={e => setForm(f => ({ ...f, leagueId: e.target.value }))} className="w-full bg-[#1a1a2e] border border-gray-700 rounded-lg px-3 py-2 text-white" placeholder="Paste league ID" />
+          <label className="text-xs text-[var(--text-secondary)] block mb-1.5 uppercase tracking-wider font-semibold">League ID</label>
+          <input type="text" value={form.leagueId} onChange={e => setForm(f => ({ ...f, leagueId: e.target.value }))} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[var(--accent-orange)] focus:shadow-[0_0_0_3px_rgba(255,107,53,0.1)] transition-all placeholder:text-[var(--text-tertiary)]" placeholder="Paste league ID" />
         </div>
+
         <div className="flex gap-2 items-end">
           <div className="flex-1">
-            <label className="text-sm text-gray-400 block mb-1">Team Name</label>
-            <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-[#1a1a2e] border border-gray-700 rounded-lg px-3 py-2 text-white" placeholder="e.g. Bay City Dragons" />
+            <label className="text-xs text-[var(--text-secondary)] block mb-1.5 uppercase tracking-wider font-semibold">Team Name</label>
+            <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[var(--accent-orange)] transition-all placeholder:text-[var(--text-tertiary)]" placeholder="e.g. Bay City Dragons" />
           </div>
-          <button type="button" onClick={randomName} className="bg-gray-700 text-white px-3 py-2 rounded-lg text-sm">🎲</button>
+          <button type="button" onClick={randomName} className="btn-ghost px-3 py-2.5 text-sm">🎲</button>
         </div>
+
         <div>
-          <label className="text-sm text-gray-400 block mb-1">Abbreviation</label>
-          <input type="text" value={form.abbreviation} onChange={e => setForm(f => ({ ...f, abbreviation: e.target.value }))} maxLength={4} className="w-24 bg-[#1a1a2e] border border-gray-700 rounded-lg px-3 py-2 text-white text-center uppercase" />
+          <label className="text-xs text-[var(--text-secondary)] block mb-1.5 uppercase tracking-wider font-semibold">Abbreviation</label>
+          <input type="text" value={form.abbreviation} onChange={e => setForm(f => ({ ...f, abbreviation: e.target.value }))} maxLength={4} className="w-24 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white text-center uppercase focus:outline-none focus:border-[var(--accent-orange)] transition-all" />
         </div>
+
         <div>
-          <label className="text-sm text-gray-400 block mb-1">Colors</label>
+          <label className="text-xs text-[var(--text-secondary)] block mb-1.5 uppercase tracking-wider font-semibold">Colors</label>
           <div className="flex gap-2 flex-wrap">
             {COLORS.map(c => (
-              <button key={c.name} type="button" onClick={() => setForm(f => ({ ...f, primaryColor: c.primary, secondaryColor: c.secondary }))} className="flex gap-1">
-                <div className="w-6 h-6 rounded" style={{ backgroundColor: c.primary }} />
-                <div className="w-6 h-6 rounded" style={{ backgroundColor: c.secondary }} />
-              </button>
+              <button key={c.name} type="button" onClick={() => setForm(f => ({ ...f, primaryColor: c.primary, secondaryColor: c.secondary }))}
+                className={`color-swatch ${form.primaryColor === c.primary ? 'active' : ''}`}
+                style={{ background: `linear-gradient(135deg, ${c.primary} 50%, ${c.secondary} 50%)` }}
+                title={c.name}
+              />
             ))}
           </div>
         </div>
+
         <div>
-          <label className="text-sm text-gray-400 block mb-1">Arena Name</label>
-          <input type="text" value={form.arenaName} onChange={e => setForm(f => ({ ...f, arenaName: e.target.value }))} className="w-full bg-[#1a1a2e] border border-gray-700 rounded-lg px-3 py-2 text-white" placeholder="Dragons Den" />
+          <label className="text-xs text-[var(--text-secondary)] block mb-1.5 uppercase tracking-wider font-semibold">Arena Name</label>
+          <input type="text" value={form.arenaName} onChange={e => setForm(f => ({ ...f, arenaName: e.target.value }))} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[var(--accent-orange)] transition-all placeholder:text-[var(--text-tertiary)]" placeholder="Dragons Den" />
         </div>
-        <button type="submit" disabled={loading} className="w-full bg-[#e94560] text-white rounded-lg py-2.5 font-semibold hover:bg-[#d63851] transition disabled:opacity-50">
+
+        <button type="submit" disabled={loading} className="btn-glow w-full py-2.5 text-sm tracking-wide">
           {loading ? 'Creating...' : 'Create Team & Draft Players'}
         </button>
       </form>

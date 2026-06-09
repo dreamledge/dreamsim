@@ -47,32 +47,36 @@ export default function CreateLeague() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold">Create New League</h2>
-      <form onSubmit={handleSubmit} className="bg-[#16213e] rounded-xl p-5 space-y-4">
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+      <h2 className="font-display text-3xl tracking-wider animate-fade-up">Create League</h2>
+      <form onSubmit={handleSubmit} className="glass-card p-5 space-y-4 animate-slide-up">
+        {error && <p className="text-[var(--accent-red)] text-sm bg-[var(--accent-red)]/10 rounded-lg py-2 px-3">{error}</p>}
+
         <div>
-          <label className="text-sm text-gray-400 block mb-1">League Name</label>
-          <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-[#1a1a2e] border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#e94560]" placeholder="e.g. Global Basketball League" />
+          <label className="text-xs text-[var(--text-secondary)] block mb-1.5 uppercase tracking-wider font-semibold">League Name</label>
+          <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[var(--accent-orange)] focus:shadow-[0_0_0_3px_rgba(255,107,53,0.1)] transition-all placeholder:text-[var(--text-tertiary)]" placeholder="e.g. Global Basketball League" />
         </div>
+
         <div>
-          <label className="text-sm text-gray-400 block mb-1">Description</label>
-          <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full bg-[#1a1a2e] border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#e94560]" />
+          <label className="text-xs text-[var(--text-secondary)] block mb-1.5 uppercase tracking-wider font-semibold">Description</label>
+          <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[var(--accent-orange)] focus:shadow-[0_0_0_3px_rgba(255,107,53,0.1)] transition-all placeholder:text-[var(--text-tertiary)]" />
         </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-sm text-gray-400 block mb-1">Teams</label>
-            <select value={form.teamCount} onChange={e => setForm(f => ({ ...f, teamCount: e.target.value }))} className="w-full bg-[#1a1a2e] border border-gray-700 rounded-lg px-3 py-2 text-white">
+            <label className="text-xs text-[var(--text-secondary)] block mb-1.5 uppercase tracking-wider font-semibold">Teams</label>
+            <select value={form.teamCount} onChange={e => setForm(f => ({ ...f, teamCount: e.target.value }))} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[var(--accent-orange)] transition-all">
               {[4, 6, 8, 10, 12, 16, 20, 30].map(n => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-sm text-gray-400 block mb-1">Playoff Teams</label>
-            <select value={form.playoffTeams} onChange={e => setForm(f => ({ ...f, playoffTeams: e.target.value }))} className="w-full bg-[#1a1a2e] border border-gray-700 rounded-lg px-3 py-2 text-white">
+            <label className="text-xs text-[var(--text-secondary)] block mb-1.5 uppercase tracking-wider font-semibold">Playoff Teams</label>
+            <select value={form.playoffTeams} onChange={e => setForm(f => ({ ...f, playoffTeams: e.target.value }))} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[var(--accent-orange)] transition-all">
               {[2, 4, 8, 16].map(n => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
         </div>
-        <button type="submit" disabled={loading} className="w-full bg-[#e94560] text-white rounded-lg py-2.5 font-semibold hover:bg-[#d63851] transition disabled:opacity-50">
+
+        <button type="submit" disabled={loading} className="btn-glow w-full py-2.5 text-sm tracking-wide">
           {loading ? 'Creating...' : 'Create League'}
         </button>
       </form>

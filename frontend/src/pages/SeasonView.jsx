@@ -28,39 +28,43 @@ export default function SeasonView() {
     load();
   }, [seasonId]);
 
-  if (loading) return <div className="flex justify-center py-8"><div className="animate-spin h-6 w-6 border-2 border-[#e94560] border-t-transparent rounded-full" /></div>;
-  if (!season) return <p className="text-gray-500">Season not found</p>;
+  if (loading) return (
+    <div className="flex justify-center py-12">
+      <div className="relative loader-2k" />
+    </div>
+  );
+  if (!season) return <p className="text-[var(--text-tertiary)]">Season not found</p>;
 
   const completed = games.filter(g => g.isCompleted);
   const upcoming = games.filter(g => !g.isCompleted);
 
   return (
-    <div className="space-y-4">
-      <div className="bg-[#16213e] rounded-xl p-4">
-        <h2 className="text-xl font-bold">Season {season.seasonNumber}</h2>
-        <p className="text-gray-500 text-sm">Week {season.currentWeek}/{season.totalWeeks} · {season.status}</p>
+    <div className="space-y-4 stagger">
+      <div className="glass-card p-4 animate-fade-up">
+        <h2 className="font-display text-3xl tracking-wider">Season {season.seasonNumber}</h2>
+        <p className="text-[var(--text-secondary)] text-sm">Week {season.currentWeek}/{season.totalWeeks} · <span className="capitalize">{season.status}</span></p>
       </div>
 
       {completed.length > 0 && (
-        <div className="bg-[#16213e] rounded-xl p-4">
-          <h3 className="font-semibold mb-3">Completed Games ({completed.length})</h3>
+        <div className="glass-card p-4 animate-fade-up">
+          <h3 className="font-display text-lg tracking-wider mb-3">Completed Games ({completed.length})</h3>
           <div className="space-y-2">
-            {completed.slice(-10).reverse().map(game => (
-              <div key={game.id} className="bg-[#1a1a2e] rounded-lg p-3">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex-1 text-right">
-                    <span className={game.homeScore > game.awayScore ? 'font-bold text-green-400' : 'text-gray-400'}>{teams[game.homeTeamId] || 'Home'}</span>
+            {completed.slice(-10).reverse().map((game, i) => (
+              <div key={game.id} className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl p-3 hover:bg-[var(--bg-tertiary)] transition-colors" style={{animationDelay: `${i * 0.04}s`}}>
+                <div className="flex items-center text-sm">
+                  <div className="flex-1 text-right pr-2">
+                    <span className={game.homeScore > game.awayScore ? 'font-bold text-[var(--accent-green)]' : 'text-[var(--text-secondary)]'}>{teams[game.homeTeamId] || 'Home'}</span>
                   </div>
-                  <div className="px-3 text-center">
-                    <span className="font-bold text-lg">{game.homeScore}</span>
-                    <span className="text-gray-500 mx-1">-</span>
-                    <span className="font-bold text-lg">{game.awayScore}</span>
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-card)] rounded-lg">
+                    <span className={`font-display text-xl ${game.homeScore > game.awayScore ? 'text-[var(--accent-green)]' : 'text-[var(--text-tertiary)]'}`}>{game.homeScore}</span>
+                    <span className="text-[var(--text-tertiary)] text-xs">-</span>
+                    <span className={`font-display text-xl ${game.awayScore > game.homeScore ? 'text-[var(--accent-green)]' : 'text-[var(--text-tertiary)]'}`}>{game.awayScore}</span>
                   </div>
-                  <div className="flex-1">
-                    <span className={game.awayScore > game.homeScore ? 'font-bold text-green-400' : 'text-gray-400'}>{teams[game.awayTeamId] || 'Away'}</span>
+                  <div className="flex-1 pl-2">
+                    <span className={game.awayScore > game.homeScore ? 'font-bold text-[var(--accent-green)]' : 'text-[var(--text-secondary)]'}>{teams[game.awayTeamId] || 'Away'}</span>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 text-center mt-1">Week {game.week}{game.isPlayoff ? ' · Playoffs' : ''}</p>
+                <p className="text-xs text-[var(--text-tertiary)] text-center mt-1.5">W{game.week}{game.isPlayoff ? ' · Playoffs' : ''}</p>
               </div>
             ))}
           </div>
@@ -68,17 +72,17 @@ export default function SeasonView() {
       )}
 
       {upcoming.length > 0 && (
-        <div className="bg-[#16213e] rounded-xl p-4">
-          <h3 className="font-semibold mb-3">Upcoming Games</h3>
+        <div className="glass-card p-4 animate-fade-up">
+          <h3 className="font-display text-lg tracking-wider mb-3">Upcoming Games</h3>
           <div className="space-y-2">
-            {upcoming.slice(0, 10).map(game => (
-              <div key={game.id} className="bg-[#1a1a2e] rounded-lg p-3">
+            {upcoming.slice(0, 10).map((game, i) => (
+              <div key={game.id} className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl p-3" style={{animationDelay: `${i * 0.04}s`}}>
                 <div className="flex items-center justify-between text-sm">
-                  <span>{teams[game.homeTeamId] || 'Home'}</span>
-                  <span className="text-gray-500">VS</span>
-                  <span>{teams[game.awayTeamId] || 'Away'}</span>
+                  <span className="flex-1 text-right pr-2">{teams[game.homeTeamId] || 'Home'}</span>
+                  <span className="text-[var(--text-tertiary)] text-xs font-semibold px-3 py-1 bg-[var(--bg-card)] rounded-lg">VS</span>
+                  <span className="flex-1 pl-2">{teams[game.awayTeamId] || 'Away'}</span>
                 </div>
-                <p className="text-xs text-gray-500 text-center mt-1">Week {game.week}</p>
+                <p className="text-xs text-[var(--text-tertiary)] text-center mt-1.5">Week {game.week}</p>
               </div>
             ))}
           </div>
@@ -86,9 +90,9 @@ export default function SeasonView() {
       )}
 
       {season.status === 'completed' && (
-        <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-center">
-          <span className="text-4xl">🏆</span>
-          <h3 className="font-bold mt-2">Season {season.seasonNumber} Complete!</h3>
+        <div className="glass-card p-6 text-center border border-yellow-500/20 animate-scale-in">
+          <div className="text-4xl mb-2">🏆</div>
+          <h3 className="font-display text-2xl tracking-wider">Season {season.seasonNumber} Complete!</h3>
         </div>
       )}
     </div>
