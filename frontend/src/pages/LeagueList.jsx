@@ -62,7 +62,12 @@ export default function LeagueList() {
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] flex items-center justify-center text-sm font-bold font-display text-white shadow-sm">L</div>
                 <div>
-                  <h3 className="font-semibold text-sm">{league.name}</h3>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-semibold text-sm">{league.name}</h3>
+                    {user.id === league.commissionerId && (
+                      <span className="badge bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 text-[10px] px-1.5 py-0">C</span>
+                    )}
+                  </div>
                   <p className="text-xs text-[var(--text-tertiary)]">{league.description?.slice(0, 60)}</p>
                   <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Season {league.currentSeason || 1}</p>
                 </div>

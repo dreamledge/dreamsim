@@ -207,7 +207,12 @@ export default function LeagueDetail() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-[var(--accent-orange)] font-medium tracking-wider uppercase">{league.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-[var(--accent-orange)] font-medium tracking-wider uppercase">{league.name}</p>
+                  {isCommissioner && (
+                    <span className="badge bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 text-[10px] px-1.5 py-0.5">Commissioner</span>
+                  )}
+                </div>
                 <h2 className="font-display text-2xl tracking-wider text-white leading-tight">{userTeam.name}</h2>
                 <div className="flex gap-4 mt-2">
                   <div className="text-center">
