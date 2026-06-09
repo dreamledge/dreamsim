@@ -41,6 +41,11 @@ export const userInventoryDoc = (userId, itemId) => doc(db, 'users', userId, 'in
 export const championshipsCol = (leagueId) => collection(db, 'leagues', leagueId, 'championships');
 export const championshipDoc = (leagueId, id) => doc(db, 'leagues', leagueId, 'championships', id);
 
+export const draftsCol = (leagueId) => collection(db, 'leagues', leagueId, 'drafts');
+export const draftDoc = (leagueId, draftId) => doc(db, 'leagues', leagueId, 'drafts', draftId);
+export const draftPicksCol = (leagueId, draftId) => collection(db, 'leagues', leagueId, 'drafts', draftId, 'picks');
+export const draftPickDoc = (leagueId, draftId, pickId) => doc(db, 'leagues', leagueId, 'drafts', draftId, 'picks', pickId);
+
 export const seasonPassesCol = (userId) => collection(db, 'users', userId, 'passes');
 export const seasonPassDoc = (userId, passId) => doc(db, 'users', userId, 'passes', passId);
 
