@@ -310,8 +310,8 @@ export default function LeagueDetail() {
         ].map((action) => (
           <Link key={action.label} to={action.to}
             className="glass-card p-3 flex flex-col items-center gap-1.5 hover:bg-[var(--bg-tertiary)] transition-all duration-200 group">
-            <span className="text-[var(--text-tertiary)] group-hover:text-[var(--accent-orange)] transition-colors">{action.icon}</span>
-            <span className="text-[10px] text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)] transition-colors font-medium">{action.label}</span>
+            <span className="text-[var(--accent-orange)] drop-shadow-[0_0_4px_rgba(255,107,53,0.25)] transition-all duration-200">{action.icon}</span>
+            <span className="text-[10px] text-center leading-tight text-[var(--text-secondary)] font-medium">{action.label}</span>
           </Link>
         ))}
       </div>
