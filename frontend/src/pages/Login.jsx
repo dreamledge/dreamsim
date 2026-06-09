@@ -20,7 +20,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+    <div className="h-screen w-screen fixed inset-0 flex items-center justify-center px-4 overflow-hidden"
       style={{backgroundImage: 'url(/landing-hero.png)', backgroundSize: 'cover', backgroundPosition: 'center'}}>
       <div className="absolute inset-0 bg-black/65 pointer-events-none" />
       <div className="w-full max-w-sm relative animate-fade-up">

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, setDoc, getDoc, getDocs, query, where, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { uid, teamsCol, teamDoc, teamPlayersCol, leagueDoc } from '../lib/firestore';
+import { uid, teamsCol, teamDoc, teamPlayersCol, leagueDoc, leagueMemberDoc } from '../lib/firestore';
 import { draftPlayers } from '../engine/gameEngine';
 
 const COLORS = [
@@ -74,6 +74,11 @@ export default function CreateTeam() {
         });
       }
 
+      await setDoc(leagueMemberDoc(form.leagueId, user.id), {
+        userId: user.id,
+        role: 'member',
+        joinedAt: new Date().toISOString(),
+      }, { merge: true });
       navigate(`/teams/${teamId}`);
     } catch (err) {
       setError(err.message);

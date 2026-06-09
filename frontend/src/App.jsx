@@ -16,6 +16,7 @@ import TradeCenter from './pages/TradeCenter';
 import Stats from './pages/Stats';
 import Store from './pages/Store';
 import NewsFeed from './pages/NewsFeed';
+import LeagueNews from './pages/LeagueNews';
 import Standings from './pages/Standings';
 
 function ProtectedRoute({ children }) {
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/teams/create" element={<ProtectedRoute><Layout><CreateTeam /></Layout></ProtectedRoute>} />
         <Route path="/teams/:id" element={<ProtectedRoute><Layout><TeamDetail /></Layout></ProtectedRoute>} />
         <Route path="/draft" element={<ProtectedRoute><Layout><Draft /></Layout></ProtectedRoute>} />
+        <Route path="/news" element={<ProtectedRoute><Layout><LeagueNews /></Layout></ProtectedRoute>} />
         <Route path="/trades" element={<ProtectedRoute><Layout><Trades /></Layout></ProtectedRoute>} />
         <Route path="/trades/:leagueId" element={<ProtectedRoute><Layout><TradeCenter /></Layout></ProtectedRoute>} />
         <Route path="/stats" element={<ProtectedRoute><Layout><Stats /></Layout></ProtectedRoute>} />

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { setDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { uid, leaguesCol, leagueDoc } from '../lib/firestore';
+import { uid, leaguesCol, leagueDoc, leagueMemberDoc } from '../lib/firestore';
 
 export default function CreateLeague() {
   const { user } = useAuth();
@@ -36,6 +36,11 @@ export default function CreateLeague() {
         currentWeek: 0,
         totalWeeks: 24,
         createdAt: new Date().toISOString(),
+      });
+      await setDoc(leagueMemberDoc(leagueId, user.id), {
+        userId: user.id,
+        role: 'commissioner',
+        joinedAt: new Date().toISOString(),
       });
       navigate(`/leagues/${leagueId}`);
     } catch (err) {

@@ -14,32 +14,46 @@ export default function Home() {
 
   useEffect(() => {
     if (!user) return;
+    const fallback = setTimeout(() => setLoading(false), 8000);
     const load = async () => {
-      const teamsSnap = await getDocs(query(teamsCol(), where('userId', '==', user.id)));
-      const leagueIds = [...new Set(teamsSnap.docs.map(d => d.data().leagueId))];
-      const leagues = [];
-      for (const lid of leagueIds) {
-        const snap = await getDoc(leagueDoc(lid));
-        if (snap.exists()) leagues.push({ id: snap.id, ...snap.data() });
-      }
-      setUserLeagues(leagues);
+      try {
+        const teamsSnap = await getDocs(query(teamsCol(), where('userId', '==', user.id)));
+        const leagueIds = new Set(teamsSnap.docs.map(d => d.data().leagueId));
 
-      const nm = {};
-      for (const l of leagues.slice(0, 3)) {
-        const newsSnap = await getDocs(query(leagueNewsCol(l.id), orderBy('createdAt', 'desc'), limit(3)));
-        nm[l.id] = newsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const commishSnap = await getDocs(query(collection(db, 'leagues'), where('commissionerId', '==', user.id)));
+        commishSnap.docs.forEach(d => leagueIds.add(d.id));
+
+        const leagues = [];
+        for (const lid of leagueIds) {
+          const snap = await getDoc(leagueDoc(lid));
+          if (snap.exists()) leagues.push({ id: snap.id, ...snap.data() });
+        }
+        setUserLeagues(leagues);
+
+        const nm = {};
+        for (const l of leagues.slice(0, 3)) {
+          try {
+            const newsSnap = await getDocs(query(leagueNewsCol(l.id), orderBy('createdAt', 'desc'), limit(3)));
+            nm[l.id] = newsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          } catch {}
+        }
+        setNewsMap(nm);
+      } catch (err) {
+        console.error('Home load error:', err);
+      } finally {
+        clearTimeout(fallback);
+        setLoading(false);
       }
-      setNewsMap(nm);
-      setLoading(false);
     };
     load();
+    return () => clearTimeout(fallback);
   }, [user]);
 
   return (
     <div className="space-y-5 stagger">
       <div className="flex items-center justify-between animate-fade-up">
         <div>
-          <h2 className="font-display text-3xl tracking-wider">Welcome{user?.displayName ? `, ${user.displayName}` : ''}</h2>
+          <h2 className="font-display text-xl tracking-wider">Welcome{user?.displayName ? `, ${user.displayName}` : ''}</h2>
           <p className="text-[var(--text-secondary)] text-sm">{userLeagues.length} active league{userLeagues.length !== 1 ? 's' : ''}</p>
         </div>
         <button onClick={() => navigate('/leagues/create')} className="btn-glow px-4 py-2 text-sm">+ New League</button>
