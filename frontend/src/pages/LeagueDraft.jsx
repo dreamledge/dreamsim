@@ -360,25 +360,24 @@ export default function LeagueDraft() {
   const renderSetup = () => (
     <div className="space-y-4 animate-fade-up">
       <h2 className="font-display text-3xl tracking-wider">Draft Setup</h2>
+
+      {seasonInProgress && isCommissioner && (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-xs text-yellow-400 flex items-start gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>The season is in progress (Week {season?.currentWeek}/{season?.totalWeeks}). Drafting mid-season will add players immediately.</span>
+        </div>
+      )}
+
       {!isCommissioner ? (
         <div className="glass-card p-8 text-center animate-scale-in">
           {seasonInProgress ? (
             <>
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <p className="text-sm text-[var(--text-secondary)]">The season is in progress. The draft will be available once the season ends.</p>
+              <p className="text-sm text-[var(--text-secondary)]">The season is in progress. The commissioner can schedule a draft at any time.</p>
             </>
           ) : (
             <p className="text-[var(--text-secondary)]">The commissioner hasn't scheduled a draft yet.</p>
           )}
-        </div>
-      ) : seasonInProgress ? (
-        <div className="glass-card p-8 text-center space-y-3 animate-scale-in">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <p className="text-sm text-[var(--text-secondary)]">The season is currently in progress.</p>
-          <p className="text-xs text-[var(--text-tertiary)]">Drafts can only be scheduled before the season starts or after it ends. Come back once the season is over to set up the next draft.</p>
-          <div className="bg-[var(--bg-secondary)] rounded-xl p-3 text-xs text-[var(--text-tertiary)]">
-            Season status: <span className="font-medium capitalize text-white">{season?.status}</span> &middot; Week {season?.currentWeek}/{season?.totalWeeks}
-          </div>
         </div>
       ) : (
         <div className="glass-card p-5 space-y-4">
