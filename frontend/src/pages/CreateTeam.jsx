@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { doc, setDoc, getDoc, getDocs, query, where, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, query, where, updateDoc, collection } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { uid, teamsCol, teamDoc, teamPlayersCol, leagueDoc, leagueMemberDoc } from '../lib/firestore';
