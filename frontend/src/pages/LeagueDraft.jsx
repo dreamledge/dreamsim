@@ -51,6 +51,7 @@ export default function LeagueDraft() {
   const navigate = useNavigate();
   const [league, setLeague] = useState(null);
   const [teams, setTeams] = useState([]);
+  const [season, setSeason] = useState(null);
   const [draft, setDraft] = useState(null);
   const [picks, setPicks] = useState([]);
   const [availablePlayers, setAvailablePlayers] = useState([]);
@@ -71,6 +72,11 @@ export default function LeagueDraft() {
         const tData = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         setTeams(tData);
         setUserTeam(tData.find(t => t.userId === user?.id) || null);
+
+        try {
+          const sSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', id), orderBy('seasonNumber', 'desc'), limit(1)));
+          if (!sSnap.empty) setSeason({ id: sSnap.docs[0].id, ...sSnap.docs[0].data() });
+        } catch (e) { console.error('season query:', e); }
 
         const dSnap = await getDocs(query(draftsCol(id), orderBy('createdAt', 'desc'), limit(1)));
         if (!dSnap.empty) {
@@ -338,6 +344,8 @@ export default function LeagueDraft() {
   };
 
   const isCommissioner = league?.commissionerId === user?.id;
+  const seasonInProgress = season && (season.status === 'regular' || season.status === 'playoffs');
+  const canSchedule = !season || season.status === 'pregame' || season.status === 'completed';
   const currentPick = picks.find(p => p.order === draft?.currentPick);
   const isMyTurn = currentPick && userTeam && currentPick.teamId === userTeam.id;
   const draftedIds = picks.filter(p => p.status === 'picked' || p.status === 'auto').map(p => p.playerId);
@@ -352,7 +360,27 @@ export default function LeagueDraft() {
   const renderSetup = () => (
     <div className="space-y-4 animate-fade-up">
       <h2 className="font-display text-3xl tracking-wider">Draft Setup</h2>
-      {isCommissioner ? (
+      {!isCommissioner ? (
+        <div className="glass-card p-8 text-center animate-scale-in">
+          {seasonInProgress ? (
+            <>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <p className="text-sm text-[var(--text-secondary)]">The season is in progress. The draft will be available once the season ends.</p>
+            </>
+          ) : (
+            <p className="text-[var(--text-secondary)]">The commissioner hasn't scheduled a draft yet.</p>
+          )}
+        </div>
+      ) : seasonInProgress ? (
+        <div className="glass-card p-8 text-center space-y-3 animate-scale-in">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <p className="text-sm text-[var(--text-secondary)]">The season is currently in progress.</p>
+          <p className="text-xs text-[var(--text-tertiary)]">Drafts can only be scheduled before the season starts or after it ends. Come back once the season is over to set up the next draft.</p>
+          <div className="bg-[var(--bg-secondary)] rounded-xl p-3 text-xs text-[var(--text-tertiary)]">
+            Season status: <span className="font-medium capitalize text-white">{season?.status}</span> &middot; Week {season?.currentWeek}/{season?.totalWeeks}
+          </div>
+        </div>
+      ) : (
         <div className="glass-card p-5 space-y-4">
           <div>
             <label className="text-xs text-[var(--text-secondary)] block mb-1.5 uppercase tracking-wider font-semibold">Schedule Draft Date & Time</label>
@@ -370,10 +398,6 @@ export default function LeagueDraft() {
               <p>• {teams.length} teams participating</p>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="glass-card p-8 text-center animate-scale-in">
-          <p className="text-[var(--text-secondary)]">The commissioner hasn't scheduled a draft yet.</p>
         </div>
       )}
     </div>
