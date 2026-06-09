@@ -34,28 +34,34 @@ export default function TeamDetail() {
 
   useEffect(() => {
     const load = async () => {
-      const teamSnap = await getDoc(teamDoc(id));
-      if (!teamSnap.exists()) return;
-      const t = { id: teamSnap.id, ...teamSnap.data() };
-      setTeam(t);
+      try {
+        const teamSnap = await getDoc(teamDoc(id));
+        if (!teamSnap.exists()) { setLoading(false); return; }
+        const t = { id: teamSnap.id, ...teamSnap.data() };
+        setTeam(t);
 
-      const pSnap = await getDocs(query(teamPlayersCol(id), where('seasonId', '==', t.seasonId || 1)));
-      setPlayers(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const pSnap = await getDocs(query(teamPlayersCol(id), where('seasonId', '==', t.seasonId || 1)));
+        setPlayers(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      if (t.leagueId) {
-        const lSnap = await getDoc(leagueDoc(t.leagueId));
-        if (lSnap.exists()) setLeague({ id: lSnap.id, ...lSnap.data() });
+        if (t.leagueId) {
+          const lSnap = await getDoc(leagueDoc(t.leagueId));
+          if (lSnap.exists()) setLeague({ id: lSnap.id, ...lSnap.data() });
+        }
+
+        try {
+          const gameSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', t.leagueId), orderBy('seasonNumber', 'desc'), limit(1)));
+          if (!gameSnap.empty) {
+            const s = gameSnap.docs[0];
+            const gSnap = await getDocs(collection(db, 'seasons', s.id, 'games'));
+            const allGames = gSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => g.homeTeamId === id || g.awayTeamId === id);
+            setGames(allGames);
+          }
+        } catch (e) { console.error('games query:', e); }
+      } catch (err) {
+        console.error('TeamDetail load error:', err);
+      } finally {
+        setLoading(false);
       }
-
-      const gameSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', t.leagueId), orderBy('seasonNumber', 'desc'), limit(1)));
-      if (!gameSnap.empty) {
-        const s = gameSnap.docs[0];
-        const gSnap = await getDocs(collection(db, 'seasons', s.id, 'games'));
-        const allGames = gSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => g.homeTeamId === id || g.awayTeamId === id);
-        setGames(allGames);
-      }
-
-      setLoading(false);
     };
     load();
   }, [id]);
