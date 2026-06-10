@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { doc, getDoc, getDocs, collection, query, where, setDoc, updateDoc, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { uid, teamsCol, teamDoc, teamPlayersCol, leagueDoc } from '../lib/firestore';
+import { uid, teamsCol, teamDoc, teamPlayersCol, teamPlayerDoc, leagueDoc } from '../lib/firestore';
 import { draftPlayers, createPlayer } from '../engine/gameEngine';
 import { generateLineupOptimization, generateDraftRecommendation } from '../engine/aiEngine';
 
@@ -31,6 +31,9 @@ export default function TeamDetail() {
   const [lineupOptimization, setLineupOptimization] = useState(null);
   const [draftRec, setDraftRec] = useState(null);
   const [drafting, setDrafting] = useState(false);
+  const [selectedStarter, setSelectedStarter] = useState(null);
+  const [swapAnim, setSwapAnim] = useState({});
+  const [swapping, setSwapping] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -94,6 +97,34 @@ export default function TeamDetail() {
   const getDraftRec = () => {
     const allPlayers = JSON.parse(sessionStorage.getItem('availablePlayers') || '[]');
     setDraftRec(generateDraftRecommendation(allPlayers, players));
+  };
+
+  const handleSwapPlayers = async (starter, benchPlayer) => {
+    if (swapping || !starter || !benchPlayer) return;
+    setSwapping(true);
+    setSwapAnim({ [starter.id]: true, [benchPlayer.id]: true });
+
+    const starterPos = starter.lineupPosition;
+
+    const updated = players.map(p => {
+      if (p.id === starter.id) return { ...p, isStarter: 0, lineupPosition: null };
+      if (p.id === benchPlayer.id) return { ...p, isStarter: 1, lineupPosition: starterPos };
+      return p;
+    });
+    setPlayers(updated);
+    setSelectedStarter(null);
+
+    try {
+      await updateDoc(teamPlayerDoc(id, starter.id), { isStarter: 0, lineupPosition: null });
+      await updateDoc(teamPlayerDoc(id, benchPlayer.id), { isStarter: 1, lineupPosition: starterPos });
+    } catch (err) {
+      console.error('Swap error:', err);
+    }
+
+    setTimeout(() => {
+      setSwapAnim({});
+      setSwapping(false);
+    }, 500);
   };
 
   const tabs = [
@@ -191,19 +222,33 @@ export default function TeamDetail() {
               <span className="text-[var(--accent-orange)]">★</span> Starters
             </h3>
             <div className="space-y-2">
-              {starters.map((p, i) => (
-                <div key={p.id} className="flex items-center gap-3 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl p-3">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-xs font-bold text-white shadow-sm">{i + 1}</div>
-                  <div className="rating-circle rating-circle-sm" style={{'--pct': `${p.overall || 50}%`} }>
-                    <span className="text-white text-xs">{p.overall || '-'}</span>
+              {starters.map((p, i) => {
+                const isSelected = selectedStarter?.id === p.id;
+                return (
+                  <div key={p.id} onClick={() => {
+                    if (swapping) return;
+                    setSelectedStarter(isSelected ? null : p);
+                  }} className={`flex items-center gap-3 bg-[var(--bg-secondary)] border rounded-xl p-3 cursor-pointer transition-all duration-200 ${
+                    isSelected
+                      ? 'border-[var(--accent-orange)] shadow-[0_0_12px_rgba(255,123,53,0.3)]'
+                      : 'border-[var(--border-subtle)]'
+                  } ${swapAnim[p.id] ? 'animate-swap' : ''}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm transition-colors duration-200 ${
+                      isSelected
+                        ? 'bg-gradient-to-br from-[#e83a4b] to-[#ff7b35] scale-110'
+                        : 'bg-gradient-to-br from-[#ff7b35] to-[#e83a4b]'
+                    }`}>{i + 1}</div>
+                    <div className="rating-circle rating-circle-sm" style={{'--pct': `${p.overall || 50}%`} }>
+                      <span className="text-white text-xs">{p.overall || '-'}</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{p.firstName} {p.lastName}</p>
+                      <span className="text-xs text-[var(--text-tertiary)] bg-[var(--bg-card)] px-1.5 py-0.5 rounded">{p.position}</span>
+                    </div>
+                    <div className="text-xs text-[var(--text-tertiary)] font-medium">{p.statsPpg?.toFixed(1) || '-'} PPG</div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{p.firstName} {p.lastName}</p>
-                    <span className="text-xs text-[var(--text-tertiary)] bg-[var(--bg-card)] px-1.5 py-0.5 rounded">{p.position}</span>
-                  </div>
-                  <div className="text-xs text-[var(--text-tertiary)] font-medium">{p.statsPpg?.toFixed(1) || '-'} PPG</div>
-                </div>
-              ))}
+                );
+              })}
               {starters.length === 0 && <p className="text-sm text-[var(--text-tertiary)] py-4 text-center">No starters set</p>}
             </div>
           </div>
@@ -212,7 +257,13 @@ export default function TeamDetail() {
               <h3 className="font-display text-lg tracking-wider mb-3">Bench ({bench.length})</h3>
               <div className="space-y-1">
                 {bench.map(p => (
-                  <div key={p.id} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors">
+                  <div key={p.id} onClick={() => {
+                    if (selectedStarter && !swapping) {
+                      handleSwapPlayers(selectedStarter, p);
+                    }
+                  }} className={`flex items-center justify-between py-2 px-2 rounded-lg transition-all duration-200 ${
+                    selectedStarter ? 'cursor-pointer hover:bg-[var(--bg-tertiary)] border border-transparent hover:border-[var(--accent-orange)]/30' : 'hover:bg-[var(--bg-secondary)]'
+                  } ${swapAnim[p.id] ? 'animate-swap' : ''}`}>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-[var(--text-tertiary)]">{p.position}</span>
                       <span className="text-sm">{p.firstName} {p.lastName}</span>
@@ -221,6 +272,9 @@ export default function TeamDetail() {
                   </div>
                 ))}
               </div>
+              {selectedStarter && (
+                <p className="text-xs text-[var(--accent-orange)] text-center mt-2 animate-fade-up">Tap a bench player to swap with {selectedStarter.firstName} {selectedStarter.lastName}</p>
+              )}
             </div>
           )}
           <button onClick={optimizeLineup} className="btn-ghost w-full py-2.5 text-sm flex items-center justify-center gap-2">

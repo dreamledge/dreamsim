@@ -231,6 +231,13 @@ body {
   to { transform: rotate(360deg); }
 }
 
+@keyframes swap-flash {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.04); box-shadow: 0 0 20px 10px rgba(255,123,53,0.2); }
+  70% { transform: scale(0.98); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255,123,53,0); }
+}
+
 @keyframes dribble {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
@@ -276,6 +283,10 @@ body {
 
 .animate-bounce-subtle {
   animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+.animate-swap {
+  animation: swap-flash 0.5s ease-out;
 }
 
 /* ─── Stagger children ─── */
