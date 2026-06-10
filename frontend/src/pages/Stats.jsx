@@ -53,7 +53,7 @@ export default function Stats() {
                 <div key={p.id} className="grid grid-cols-4 items-center px-2 py-1.5 text-sm hover:bg-[var(--bg-secondary)] rounded-lg transition-colors">
                   <span className="col-span-2 flex items-center gap-2">
                     <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                      i < 3 ? 'bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] text-white' : 'text-[var(--text-tertiary)]'
+                      i < 3 ? 'bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] text-white' : 'text-[var(--text-tertiary)]'
                     }`}>{i + 1}</span>
                     <span className="font-medium">{p.firstName} {p.lastName}</span>
                     <span className="text-xs text-[var(--text-tertiary)]">{p.position}</span>
@@ -68,8 +68,8 @@ export default function Stats() {
           <div className="grid grid-cols-2 gap-3 animate-fade-up">
             <div className="glass-card p-4">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 rounded-full bg-[var(--accent-green)]/20 flex items-center justify-center">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+                <div className="w-6 h-6 rounded-full bg-[var(--accent-teal)]/20 flex items-center justify-center">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/></svg>
                 </div>
                 <h4 className="font-display text-base tracking-wider">Rebounds</h4>
               </div>
@@ -77,7 +77,7 @@ export default function Stats() {
                 {[...leaders].sort((a, b) => (b.statsRpg || 0) - (a.statsRpg || 0)).slice(0, 5).map((p, i) => (
                   <div key={i} className="flex justify-between items-center py-1">
                     <span className="text-[var(--text-secondary)] truncate mr-2">{p.firstName} {p.lastName}</span>
-                    <span className="font-display text-lg text-[var(--accent-green)]">{(p.statsRpg || 0).toFixed(1)}</span>
+                    <span className="font-display text-lg text-[var(--accent-teal)]">{(p.statsRpg || 0).toFixed(1)}</span>
                   </div>
                 ))}
               </div>

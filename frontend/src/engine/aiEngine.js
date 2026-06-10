@@ -30,42 +30,63 @@ export function generateTradeAnalysis(teamA, teamB, teamAPlayers, teamBPlayers) 
   };
 }
 
-export function generateDraftRecommendation(availablePlayers, roster) {
-  const posCounts = { PG: 0, SG: 0, SF: 0, PF: 0, C: 0 };
-  roster.forEach(p => { if (posCounts[p.position] !== undefined) posCounts[p.position]++; });
-  const needs = Object.entries(posCounts).sort(([,a], [,b]) => a - b).map(([pos]) => pos);
-  const primaryNeed = needs[0];
+function countCoverage(roster, slot) {
+  return roster.filter(p => isEligible(p, slot)).length;
+}
 
-  const scored = availablePlayers.map(p => ({
-    player: p,
-    score: p.overall + (p.position === primaryNeed ? 5 : 0) + (p.potential > 75 ? 3 : 0) - (p.overall < 60 ? 5 : 0),
-  })).sort((a, b) => b.score - a.score);
+export function generateDraftRecommendation(availablePlayers, roster) {
+  const slotCoverage = {};
+  for (const slot of ['PG', 'SG', 'SF', 'PF', 'C']) {
+    slotCoverage[slot] = countCoverage(roster, slot);
+  }
+  const needs = Object.entries(slotCoverage).sort(([, a], [, b]) => a - b).map(([pos]) => pos);
+
+  const scored = availablePlayers.map(p => {
+    let score = p.overall + (p.potential > 75 ? 3 : 0) - (p.overall < 60 ? 5 : 0);
+    for (const need of needs.slice(0, 2)) {
+      if (isEligible(p, need)) score += 5;
+    }
+    return { player: p, score };
+  }).sort((a, b) => b.score - a.score);
 
   return {
     topPick: scored[0]?.player || null,
     recommendations: scored.slice(0, 5).map(r => ({
       player: r.player,
       fitScore: Math.round(r.score),
-      reason: r.player.position === primaryNeed
+      reason: needs.some(n => isEligible(r.player, n))
         ? 'Fills a critical positional need'
         : r.player.potential > 75 ? 'High upside potential' : 'Best player available',
     })),
-    teamNeeds: { positions: needs, primaryNeed, rosterComposition: posCounts },
+    teamNeeds: { positions: needs, slotCoverage },
   };
 }
 
+const POSITION_ELIGIBILITY = {
+  PG: ['PG', 'SG'],
+  SG: ['PG', 'SG', 'SF'],
+  SF: ['SG', 'SF', 'PF'],
+  PF: ['SF', 'PF', 'C'],
+  C: ['PF', 'C'],
+};
+
+function isEligible(player, slotPosition) {
+  const eligible = POSITION_ELIGIBILITY[player.primaryPosition || player.position] || ['PG', 'SG', 'SF', 'PF', 'C'];
+  return eligible.includes(slotPosition);
+}
+
 export function generateLineupOptimization(players) {
-  const groups = { PG: [], SG: [], SF: [], PF: [], C: [] };
-  players.forEach(p => { if (groups[p.position]) groups[p.position].push(p); });
   const used = new Set();
-  const starters = ['PG', 'SG', 'SF', 'PF', 'C'].map(pos => {
-    const available = groups[pos].filter(p => !used.has(p.id)).sort((a, b) => b.overall - a.overall);
-    if (available.length > 0) { used.add(available[0].id); return available[0]; }
+  const starters = ['PG', 'SG', 'SF', 'PF', 'C'].map(slot => {
+    const eligible = players
+      .filter(p => !used.has(p.id) && isEligible(p, slot))
+      .sort((a, b) => b.overall - a.overall);
+    if (eligible.length > 0) { used.add(eligible[0].id); return { ...eligible[0], lineupSlot: slot }; }
     return null;
   }).filter(Boolean);
   const bench = players.filter(p => !used.has(p.id)).sort((a, b) => b.overall - a.overall);
   return {
-    starters: starters.map((p, i) => ({ ...p, lineupPosition: i })),
+    starters,
     bench: bench.slice(0, 5),
     rating: starters.length > 0 ? Math.round(starters.reduce((s, p) => s + p.overall, 0) / starters.length) : 0,
     suggestions: starters.length < 5 ? ['Roster incomplete. Draft more players.'] : [],

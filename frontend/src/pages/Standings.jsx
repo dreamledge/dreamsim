@@ -37,9 +37,9 @@ export default function Standings() {
               <Link key={team.id} to={`/teams/${team.id}`} className="grid grid-cols-5 items-center px-4 py-3 text-sm hover:bg-[var(--bg-secondary)] transition-colors group">
                 <div className="col-span-2 flex items-center gap-2.5">
                   <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                    i < 3 ? 'bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] text-white shadow-sm' : 'text-[var(--text-tertiary)]'
+                    i < 3 ? 'bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] text-white shadow-sm' : 'text-[var(--text-tertiary)]'
                   }`}>{i + 1}</span>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold font-display text-white shadow-sm" style={{ backgroundColor: team.primaryColor || '#ff6b35' }}>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold font-display text-white shadow-sm" style={{ backgroundColor: team.primaryColor || '#ff7b35' }}>
                     {team.abbreviation || team.name?.slice(0, 2).toUpperCase()}
                   </div>
                   <span className="truncate font-medium">{team.name}</span>

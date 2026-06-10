@@ -53,15 +53,15 @@ export default function SeasonView() {
               <div key={game.id} className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl p-3 hover:bg-[var(--bg-tertiary)] transition-colors" style={{animationDelay: `${i * 0.04}s`}}>
                 <div className="flex items-center text-sm">
                   <div className="flex-1 text-right pr-2">
-                    <span className={game.homeScore > game.awayScore ? 'font-bold text-[var(--accent-green)]' : 'text-[var(--text-secondary)]'}>{teams[game.homeTeamId] || 'Home'}</span>
+                    <span className={game.homeScore > game.awayScore ? 'font-bold text-[var(--accent-teal)]' : 'text-[var(--text-secondary)]'}>{teams[game.homeTeamId] || 'Home'}</span>
                   </div>
                   <div className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-card)] rounded-lg">
-                    <span className={`font-display text-xl ${game.homeScore > game.awayScore ? 'text-[var(--accent-green)]' : 'text-[var(--text-tertiary)]'}`}>{game.homeScore}</span>
+                    <span className={`font-display text-xl ${game.homeScore > game.awayScore ? 'text-[var(--accent-teal)]' : 'text-[var(--text-tertiary)]'}`}>{game.homeScore}</span>
                     <span className="text-[var(--text-tertiary)] text-xs">-</span>
-                    <span className={`font-display text-xl ${game.awayScore > game.homeScore ? 'text-[var(--accent-green)]' : 'text-[var(--text-tertiary)]'}`}>{game.awayScore}</span>
+                    <span className={`font-display text-xl ${game.awayScore > game.homeScore ? 'text-[var(--accent-teal)]' : 'text-[var(--text-tertiary)]'}`}>{game.awayScore}</span>
                   </div>
                   <div className="flex-1 pl-2">
-                    <span className={game.awayScore > game.homeScore ? 'font-bold text-[var(--accent-green)]' : 'text-[var(--text-secondary)]'}>{teams[game.awayTeamId] || 'Away'}</span>
+                    <span className={game.awayScore > game.homeScore ? 'font-bold text-[var(--accent-teal)]' : 'text-[var(--text-secondary)]'}>{teams[game.awayTeamId] || 'Away'}</span>
                   </div>
                 </div>
                 <p className="text-xs text-[var(--text-tertiary)] text-center mt-1.5">W{game.week}{game.isPlayoff ? ' · Playoffs' : ''}</p>

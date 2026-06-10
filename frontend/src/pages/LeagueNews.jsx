@@ -135,7 +135,7 @@ export default function LeagueNews() {
                   className="w-full p-4 flex items-center justify-between hover:bg-[var(--bg-tertiary)] transition-colors text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] flex items-center justify-center text-sm font-bold font-display text-white shadow-sm shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-sm font-bold font-display text-white shadow-sm shrink-0">
                       {league.name?.slice(0, 2).toUpperCase()}
                     </div>
                     <div>

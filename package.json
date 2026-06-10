@@ -5,6 +5,7 @@
   "description": "Dynasty League - Free-to-Play Basketball Franchise Simulator",
   "scripts": {
     "dev": "cd frontend && npx vite",
+    "backend": "cd backend && node server.js",
     "build": "cd frontend && npx vite build",
     "preview": "cd frontend && npx vite preview",
     "deploy": "cd frontend && npx vercel --prod"

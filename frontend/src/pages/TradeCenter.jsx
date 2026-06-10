@@ -100,7 +100,7 @@ export default function TradeCenter() {
         <div className="space-y-1">
           {teams.filter(t => t.id !== userTeam.id).map(t => (
             <button key={t.id} onClick={() => selectTarget(t.id)} className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all ${
-              selectedTarget === t.id ? 'bg-gradient-to-r from-[#ff6b35] to-[#ff2d55] text-white shadow-md' : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+              selectedTarget === t.id ? 'bg-gradient-to-r from-[#ff7b35] to-[#e83a4b] text-white shadow-md' : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
             }`}>
               <span className="font-medium">{t.name}</span>
               <span className="text-xs ml-2 opacity-70">({t.wins || 0}W - {t.losses || 0}L)</span>
@@ -136,16 +136,16 @@ export default function TradeCenter() {
       )}
 
       {analysis && (
-        <div className="glass-card p-4 animate-scale-in" style={{borderLeft: `3px solid ${analysis.score > 50 ? 'var(--accent-green)' : 'var(--accent-red)'}`}}>
+        <div className="glass-card p-4 animate-scale-in" style={{borderLeft: `3px solid ${analysis.score > 50 ? 'var(--accent-teal)' : 'var(--accent-red)'}`}}>
           <div className="flex items-center gap-2 mb-3">
             <span className="badge badge-ai">AI</span>
             <h3 className="font-display text-lg tracking-wider">Trade Analysis</h3>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`font-display text-2xl ${analysis.score > 50 ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]'}`}>{analysis.verdict}</span>
+            <span className={`font-display text-2xl ${analysis.score > 50 ? 'text-[var(--accent-teal)]' : 'text-[var(--accent-red)]'}`}>{analysis.verdict}</span>
             <div className="flex items-center gap-1.5">
               <div className="h-2 w-24 rounded-full bg-[var(--bg-secondary)] overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${analysis.score > 50 ? 'bg-[var(--accent-green)]' : 'bg-[var(--accent-red)]'}`} style={{width: `${Math.abs(analysis.score)}%`}} />
+                <div className={`h-full rounded-full transition-all ${analysis.score > 50 ? 'bg-[var(--accent-teal)]' : 'bg-[var(--accent-red)]'}`} style={{width: `${Math.abs(analysis.score)}%`}} />
               </div>
               <span className="text-xs text-[var(--text-tertiary)]">{analysis.score}/100</span>
             </div>

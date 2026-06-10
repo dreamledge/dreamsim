@@ -32,7 +32,7 @@ export default function Layout({ children }) {
       <header className="glass-strong sticky top-0 z-50 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] flex items-center justify-center text-[10px] font-bold font-display text-white shadow-lg">DL</div>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-[10px] font-bold font-display text-white shadow-lg">DL</div>
             <h1 className="font-display text-xl tracking-wider text-white">Dynasty Sim</h1>
           </div>
           <div className="flex items-center gap-3">

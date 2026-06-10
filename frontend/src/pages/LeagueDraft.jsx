@@ -3,12 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, getDocs, setDoc, updateDoc, onSnapshot, query, where, orderBy, limit, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { uid, leagueDoc, teamsCol, teamPlayersCol, teamPlayerDoc, draftsCol, draftDoc, draftPicksCol, draftPickDoc } from '../lib/firestore';
-import { createPlayer } from '../engine/gameEngine';
+import { uid, leagueDoc, teamsCol, teamPlayersCol, teamPlayerDoc, draftsCol, draftDoc, draftPicksCol, draftPickDoc, nbaPoolDoc } from '../lib/firestore';
+import { draftNbaPlayers, ensureNbaPool } from '../engine/gameEngine';
 
 const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'];
-const FIRST_NAMES = ['Jaylen','Marcus','Devin','Trae','Zion','Ja','Luka','Giannis','Steph','KD','Kyrie','Jayson','Jimmy','Bam','Donovan','Shai','Anthony','LaMelo','Cade','Scottie','Tyrese','Jalen','Herb','Paolo','Keegan','Jaden','Austin','RJ','Victor','Chet','Brandon','Darius','Franz','Jabari','Walker','Bennedict','Shaedon','Dyson','Jaden','Keegan'];
-const LAST_NAMES = ['Williams','Johnson','Brown','Davis','Miller','Wilson','Moore','Taylor','Anderson','Thomas','Jackson','White','Harris','Martin','Thompson','Garcia','Robinson','Clark','Lewis','Lee','Walker','Hall','Allen','Young','King','Wright','Scott','Turner','Hill','Adams','Baker','Carter','Evans','Foster','Green','Hughes','Jenkins','Kelly','Long','Mitchell'];
 
 function shuffle(arr) {
   const a = [...arr];
@@ -19,27 +17,33 @@ function shuffle(arr) {
   return a;
 }
 
-function generateAvailablePlayers(count) {
-  const players = [];
-  for (let i = 0; i < count; i++) {
-    const pos = POSITIONS[i % 5];
-    const fn = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
-    const ln = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
-    const p = createPlayer(fn, ln, pos, 19 + Math.floor(Math.random() * 5));
-    players.push({ ...p, id: uid() });
-  }
-  return players;
+async function generateAvailablePlayers(count) {
+  await ensureNbaPool();
+  return draftNbaPlayers(count);
+}
+
+const POSITION_ELIGIBILITY = {
+  PG: ['PG', 'SG'],
+  SG: ['PG', 'SG', 'SF'],
+  SF: ['SG', 'SF', 'PF'],
+  PF: ['SF', 'PF', 'C'],
+  C: ['PF', 'C'],
+};
+
+function isEligible(player, slot) {
+  const eligible = POSITION_ELIGIBILITY[player.primaryPosition || player.position] || ['PG', 'SG', 'SF', 'PF', 'C'];
+  return eligible.includes(slot);
 }
 
 function findWeakestPosition(players, available) {
-  const posAvg = POSITIONS.map(pos => {
-    const ps = players.filter(p => p.position === pos);
-    const avg = ps.length > 0 ? ps.reduce((s, p) => s + (p.overall || 50), 0) / ps.length : 0;
-    return { pos, avg };
-  }).sort((a, b) => a.avg - b.avg);
+  const slotCoverage = {};
+  for (const slot of POSITIONS) {
+    slotCoverage[slot] = players.filter(p => isEligible(p, slot)).length;
+  }
+  const sorted = Object.entries(slotCoverage).sort(([, a], [, b]) => a - b);
 
-  for (const { pos } of posAvg) {
-    const match = available.filter(p => p.position === pos).sort((a, b) => (b.overall || 0) - (a.overall || 0));
+  for (const [slot] of sorted) {
+    const match = available.filter(p => isEligible(p, slot)).sort((a, b) => (b.overall || 0) - (a.overall || 0));
     if (match.length > 0) return match[0];
   }
   return available.sort((a, b) => (b.overall || 0) - (a.overall || 0))[0];
@@ -198,7 +202,7 @@ export default function LeagueDraft() {
       await setDoc(draftPickDoc(id, dId, pId), p);
     }
 
-    const players = generateAvailablePlayers(totalPicks);
+    const players = await generateAvailablePlayers(totalPicks);
     for (const p of players) {
       await setDoc(doc(collection(db, 'leagues', id, 'drafts', dId, 'players'), p.id), p);
     }
@@ -332,7 +336,8 @@ export default function LeagueDraft() {
         id: pId,
         firstName: pick.playerName?.split(' ')[0] || 'Player',
         lastName: pick.playerName?.split(' ').slice(1).join(' ') || 'Unknown',
-        position: POSITIONS[finalPicks.indexOf(pick) % 5],
+        primaryPosition: pick.primaryPosition || POSITIONS[finalPicks.indexOf(pick) % 5],
+        canPlay: pick.canPlay || [POSITIONS[finalPicks.indexOf(pick) % 5]],
         overall: 50 + Math.floor(Math.random() * 35),
         age: 19 + Math.floor(Math.random() * 7),
         teamId: team.id,
@@ -433,7 +438,7 @@ export default function LeagueDraft() {
           {currentPick ? (
             <>
               <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider mb-1">Round {currentPick.round} &middot; Pick {currentPick.order}</p>
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] flex items-center justify-center text-xl font-bold font-display text-white mx-auto mb-2 shadow-lg">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-xl font-bold font-display text-white mx-auto mb-2 shadow-lg">
                 {currentPick.teamName?.slice(0, 2).toUpperCase()}
               </div>
               <h3 className="font-display text-xl tracking-wider">{currentPick.teamName}</h3>
@@ -450,7 +455,7 @@ export default function LeagueDraft() {
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-[var(--accent-green)] mt-2 flex items-center justify-center gap-1.5">
+                <p className="text-sm text-[var(--accent-teal)] mt-2 flex items-center justify-center gap-1.5">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   Selected: {currentPick.playerName}
                 </p>
@@ -525,7 +530,7 @@ export default function LeagueDraft() {
     <div className="space-y-4 stagger">
       <h2 className="font-display text-3xl tracking-wider animate-fade-up">Draft Complete</h2>
       <div className="glass-card p-5 text-center animate-scale-in">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-green)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2"><polyline points="20 6 9 17 4 12"/></svg>
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-teal)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2"><polyline points="20 6 9 17 4 12"/></svg>
         <p className="text-sm text-[var(--text-secondary)]">All {draft?.totalPicks} picks have been completed!</p>
         <p className="text-xs text-[var(--text-tertiary)] mt-1">Drafted players have been added to their teams.</p>
         <button onClick={() => navigate(`/leagues/${id}`)} className="btn-glow mt-4 px-6 py-2.5 text-sm">Back to League</button>
@@ -538,7 +543,7 @@ export default function LeagueDraft() {
             <div key={p.order} className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-[var(--bg-secondary)]/50 transition-colors text-sm" style={{animationDelay: `${i * 0.03}s`}}>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-[var(--text-tertiary)] w-5">#{p.order}</span>
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] flex items-center justify-center text-[10px] font-bold text-white">{p.teamName?.slice(0, 2).toUpperCase()}</div>
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-[10px] font-bold text-white">{p.teamName?.slice(0, 2).toUpperCase()}</div>
                 <span className="font-medium text-xs">{p.teamName}</span>
               </div>
               <div className="flex items-center gap-2">

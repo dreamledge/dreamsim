@@ -59,7 +59,7 @@ export default function Trades() {
               <div key={trade.id} className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl p-3.5 flex items-center justify-between">
                 <span className="text-sm font-medium">{trade.teamAId?.slice(0, 8)}</span>
                 <span className={`badge ${
-                  trade.status === 'accepted' ? 'bg-green-500/20 text-[var(--accent-green)] border border-green-500/20' :
+                  trade.status === 'accepted' ? 'bg-[var(--accent-teal)]/20 text-[var(--accent-teal)] border border-[var(--accent-teal)]/20' :
                   trade.status === 'rejected' ? 'bg-red-500/20 text-[var(--accent-red)] border border-red-500/20' :
                   'bg-yellow-500/20 text-[var(--accent-yellow)] border border-yellow-500/20'
                 }`}>{trade.status}</span>

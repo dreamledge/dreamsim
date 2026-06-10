@@ -25,7 +25,7 @@ export default function Login() {
       <div className="absolute inset-0 bg-black/65 pointer-events-none" />
       <div className="w-full max-w-sm relative animate-fade-up">
         <div className="text-center mb-8">
-          <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] flex items-center justify-center text-base font-bold font-display text-white shadow-xl shadow-[#ff6b35]/30 mb-4 animate-dribble relative overflow-hidden">
+          <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-base font-bold font-display text-white shadow-xl shadow-[#ff7b35]/30 mb-4 animate-dribble relative overflow-hidden">
   <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" viewBox="0 0 100 100">
     <line x1="50" y1="0" x2="50" y2="100" stroke="rgba(0,0,0,0.35)" strokeWidth="2.5" />
     <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(0,0,0,0.35)" strokeWidth="2.5" />

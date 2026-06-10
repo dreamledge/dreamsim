@@ -65,7 +65,7 @@ export default function Home() {
         </div>
       ) : userLeagues.length === 0 ? (
         <div className="glass-card p-8 text-center animate-scale-in">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] flex items-center justify-center text-2xl mb-4 shadow-lg shadow-[#ff6b35]/20">🏀</div>
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-2xl mb-4 shadow-lg shadow-[#ff7b35]/20">🏀</div>
           <h3 className="font-display text-2xl tracking-wider">Welcome to Dynasty</h3>
           <p className="text-[var(--text-secondary)] text-sm mt-1">Create or join a league to get started</p>
           <div className="flex gap-3 mt-6 justify-center">
@@ -81,7 +81,7 @@ export default function Home() {
               {userLeagues.map((league, i) => (
                 <Link key={league.id} to={`/leagues/${league.id}`} className="glass-card p-4 flex items-center justify-between hover:bg-[var(--bg-tertiary)] transition-all duration-200 hover:translate-x-0.5 group" style={{animationDelay: `${i * 0.06}s`}}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] flex items-center justify-center text-sm font-bold font-display text-white shadow-sm">L</div>
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-sm font-bold font-display text-white shadow-sm">L</div>
                     <div>
                       <h4 className="font-semibold text-sm">{league.name}</h4>
                       <p className="text-xs text-[var(--text-tertiary)]">Season {league.currentSeason || 1}</p>

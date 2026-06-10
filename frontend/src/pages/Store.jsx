@@ -84,14 +84,14 @@ export default function Store() {
                 <h3 className="font-medium text-sm">{item.name}</h3>
                 <p className="text-xs text-[var(--text-tertiary)] truncate">{item.description}</p>
                 <div className="flex items-center gap-2 mt-1.5">
-                  <span className={`badge ${item.isPremium ? 'badge-premium' : 'bg-green-500/20 text-[var(--accent-green)]'}`}>
+                  <span className={`badge ${item.isPremium ? 'badge-premium' : 'bg-[var(--accent-teal)]/20 text-[var(--accent-teal)]'}`}>
                     {item.isPremium ? 'Premium' : 'Free'}
                   </span>
                   {item.price > 0 && <span className="text-xs text-[var(--text-tertiary)]">{item.price} coins</span>}
                 </div>
               </div>
               {owned ? (
-                <span className="text-[var(--accent-green)] text-xs font-semibold flex items-center gap-1">
+                <span className="text-[var(--accent-teal)] text-xs font-semibold flex items-center gap-1">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                   Owned
                 </span>

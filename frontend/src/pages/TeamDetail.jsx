@@ -119,9 +119,9 @@ export default function TeamDetail() {
   return (
     <div className="space-y-4 stagger">
       <div className="glass-card p-5 relative overflow-hidden animate-fade-up" style={{background: `linear-gradient(135deg, ${team.primaryColor || '#111120'} 0%, ${team.primaryColor || '#111120'} 40%, var(--bg-card) 100%)`}}>
-        <div className="absolute top-0 right-0 w-40 h-40 opacity-20 rounded-full blur-3xl" style={{background: team.secondaryColor || '#ff6b35'}} />
+        <div className="absolute top-0 right-0 w-40 h-40 opacity-20 rounded-full blur-3xl" style={{background: team.secondaryColor || '#ff7b35'}} />
         <div className="flex items-center gap-4 relative">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold font-display text-white shadow-xl" style={{ backgroundColor: team.primaryColor || '#ff6b35', boxShadow: `0 8px 24px ${team.primaryColor || '#ff6b35'}44` }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold font-display text-white shadow-xl" style={{ backgroundColor: team.primaryColor || '#ff7b35', boxShadow: `0 8px 24px ${team.primaryColor || '#ff7b35'}44` }}>
             {team.abbreviation || team.name?.slice(0, 2).toUpperCase()}
           </div>
           <div className="flex-1">
@@ -142,7 +142,7 @@ export default function TeamDetail() {
           {tabs.map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)} className={`px-4 py-2 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all duration-200 whitespace-nowrap ${
               activeTab === tab.key
-                ? 'bg-gradient-to-r from-[#ff6b35] to-[#ff2d55] text-white shadow-md'
+                ? 'bg-gradient-to-r from-[#ff7b35] to-[#e83a4b] text-white shadow-md'
                 : 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
             }`}>
               {tab.label}
@@ -193,7 +193,7 @@ export default function TeamDetail() {
             <div className="space-y-2">
               {starters.map((p, i) => (
                 <div key={p.id} className="flex items-center gap-3 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl p-3">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] flex items-center justify-center text-xs font-bold text-white shadow-sm">{i + 1}</div>
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-xs font-bold text-white shadow-sm">{i + 1}</div>
                   <div className="rating-circle rating-circle-sm" style={{'--pct': `${p.overall || 50}%`} }>
                     <span className="text-white text-xs">{p.overall || '-'}</span>
                   </div>
@@ -342,22 +342,22 @@ export default function TeamDetail() {
                   <div key={game.id} className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl p-3.5 hover:bg-[var(--bg-tertiary)] transition-colors" style={{animationDelay: `${i * 0.04}s`}}>
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
-                        <span className={`text-sm font-medium ${won ? 'text-[var(--accent-green)]' : 'text-[var(--text-secondary)]'}`}>
+                        <span className={`text-sm font-medium ${won ? 'text-[var(--accent-teal)]' : 'text-[var(--text-secondary)]'}`}>
                           {isHome ? 'vs' : '@'} {isHome ? game.awayTeamId?.slice(0, 8) || 'Opp' : game.homeTeamId?.slice(0, 8) || 'Opp'}
                         </span>
                       </div>
                       {game.isCompleted ? (
                         <div className="flex items-center gap-2 px-3">
-                          <span className={`font-display text-xl ${game.homeScore > game.awayScore ? 'text-[var(--accent-green)]' : 'text-[var(--text-tertiary)]'}`}>{game.homeScore}</span>
+                          <span className={`font-display text-xl ${game.homeScore > game.awayScore ? 'text-[var(--accent-teal)]' : 'text-[var(--text-tertiary)]'}`}>{game.homeScore}</span>
                           <span className="text-[var(--text-tertiary)] text-xs">-</span>
-                          <span className={`font-display text-xl ${game.awayScore > game.homeScore ? 'text-[var(--accent-green)]' : 'text-[var(--text-tertiary)]'}`}>{game.awayScore}</span>
+                          <span className={`font-display text-xl ${game.awayScore > game.homeScore ? 'text-[var(--accent-teal)]' : 'text-[var(--text-tertiary)]'}`}>{game.awayScore}</span>
                         </div>
                       ) : (
                         <span className="text-xs text-[var(--text-tertiary)] font-medium px-3">VS</span>
                       )}
                       <div className="text-right flex-shrink-0">
                         <span className="text-xs text-[var(--text-tertiary)]">W{game.week}</span>
-                        {won && <span className="ml-2 text-[var(--accent-green)] text-xs">W</span>}
+                        {won && <span className="ml-2 text-[var(--accent-teal)] text-xs">W</span>}
                       </div>
                     </div>
                   </div>

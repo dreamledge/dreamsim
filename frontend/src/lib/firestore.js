@@ -49,4 +49,6 @@ export const draftPickDoc = (leagueId, draftId, pickId) => doc(db, 'leagues', le
 export const seasonPassesCol = (userId) => collection(db, 'users', userId, 'passes');
 export const seasonPassDoc = (userId, passId) => doc(db, 'users', userId, 'passes', passId);
 
+export const nbaPoolDoc = () => doc(db, 'nba_players', 'pool');
+
 export { uid, serverTimestamp, increment };

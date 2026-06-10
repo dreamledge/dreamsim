@@ -210,45 +210,46 @@ export default function LeagueDetail() {
       {/* ── Team Header ── */}
       <div className="glass-card p-4 bg-gradient-to-br from-[var(--bg-card)] via-[var(--bg-card)] to-[var(--accent-orange)]/5 relative overflow-hidden animate-fade-up">
         <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-[var(--accent-orange)]/8 to-transparent rounded-full blur-3xl" />
-        <div className="flex items-start gap-3 relative z-10">
+        <div className="flex flex-wrap items-start gap-2 sm:gap-3 relative z-10">
           {userTeam ? (
             <>
-              <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-xl font-bold font-display text-white shadow-lg relative shrink-0"
-                style={{ background: `linear-gradient(135deg, ${userTeam.primaryColor || '#ff6b35'}, ${userTeam.secondaryColor || '#ff2d55'})` }}>
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center text-base sm:text-xl font-bold font-display text-white shadow-lg relative shrink-0"
+                style={{ background: `linear-gradient(135deg, ${userTeam.primaryColor || '#ff7b35'}, ${userTeam.secondaryColor || '#e83a4b'})` }}>
                 {userTeam.abbreviation || userTeam.name?.slice(0, 2).toUpperCase()}
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] flex items-center justify-center">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accent-orange)]"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-xs text-[var(--accent-orange)] font-medium tracking-wider uppercase">{league.name}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="font-display text-2xl tracking-wider text-white leading-tight">{userTeam.name}</h2>
+                  <span className="text-lg text-[var(--text-tertiary)]">·</span>
+                  <p className="font-display text-lg tracking-wider text-[var(--text-secondary)]">{league.name}</p>
                   {isCommissioner && (
                     <span className="badge bg-yellow-500/20 text-yellow-400 border border-yellow-500/20 text-[10px] px-1.5 py-0.5">Commissioner</span>
                   )}
                 </div>
-                <h2 className="font-display text-2xl tracking-wider text-white leading-tight">{userTeam.name}</h2>
-                <div className="flex gap-4 mt-2">
+                <div className="flex gap-3 sm:gap-4 mt-2">
                   <div className="text-center">
-                    <p className="text-xs text-[var(--text-tertiary)]">OVR</p>
-                    <p className="font-display text-lg text-white">{userOvr || '--'}</p>
+                    <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)]">OVR</p>
+                    <p className="font-display text-base sm:text-lg text-white">{userOvr || '--'}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-[var(--text-tertiary)]">RANK</p>
-                    <p className="font-display text-lg text-white">{userRank ? `#${userRank}` : '--'}</p>
+                    <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)]">RANK</p>
+                    <p className="font-display text-base sm:text-lg text-white">{userRank ? `#${userRank}` : '--'}</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-[var(--text-tertiary)]">RECORD</p>
-                    <p className="font-display text-lg text-white">{userTeam.wins || 0}-{userTeam.losses || 0}</p>
+                    <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)]">REC</p>
+                    <p className="font-display text-base sm:text-lg text-white">{userTeam.wins || 0}-{userTeam.losses || 0}</p>
                   </div>
                 </div>
                 <div className="mt-2 h-1 bg-[var(--bg-secondary)] rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[#ff6b35] to-[#ff2d55] rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (userOvr || 50))}%` }} />
+                  <div className="h-full bg-gradient-to-r from-[#ff7b35] to-[#e83a4b] rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (userOvr || 50))}%` }} />
                 </div>
               </div>
 
-              <div className="shrink-0 w-32">
-                <p className="text-[10px] text-[var(--accent-orange)] font-semibold tracking-wider uppercase mb-1.5">Next Game</p>
+              <div className="w-full sm:w-32 shrink-0">
+                <p className="text-[10px] text-[var(--accent-orange)] font-semibold tracking-wider uppercase mb-1 sm:mb-1.5">Next Game</p>
                 {(() => {
                   if (nextGame) {
                     const oppId = nextGame.homeTeamId === userTeam?.id ? nextGame.awayTeamId : nextGame.homeTeamId;
@@ -258,12 +259,12 @@ export default function LeagueDetail() {
                       <div className="bg-[var(--bg-secondary)] rounded-xl p-2 text-center space-y-1">
                         <div className="flex items-center justify-center gap-1">
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[8px] font-bold text-white"
-                            style={{ background: userTeam.primaryColor || '#ff6b35' }}>
+                            style={{ background: userTeam.primaryColor || '#ff7b35' }}>
                             {userTeam.abbreviation || userTeam.name?.slice(0, 2).toUpperCase()}
                           </div>
                           <span className="text-[10px] text-[var(--text-tertiary)] font-bold">VS</span>
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[8px] font-bold text-white"
-                            style={{ background: opp?.primaryColor || '#ff6b35' }}>
+                            style={{ background: opp?.primaryColor || '#ff7b35' }}>
                             {opp?.abbreviation || opp?.name?.slice(0, 2).toUpperCase() || '??'}
                           </div>
                         </div>
@@ -284,7 +285,7 @@ export default function LeagueDetail() {
             </>
           ) : (
             <div className="flex-1 text-center py-2">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] flex items-center justify-center text-lg font-bold font-display text-white shadow-lg mx-auto mb-2">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-lg font-bold font-display text-white shadow-lg mx-auto mb-2">
                 {league.name?.slice(0, 2).toUpperCase()}
               </div>
               <p className="font-display text-xl tracking-wider">{league.name}</p>
@@ -305,7 +306,7 @@ export default function LeagueDetail() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white"
-                      style={{ background: home.primaryColor || '#ff6b35' }}>
+                      style={{ background: home.primaryColor || '#ff7b35' }}>
                       {home.abbreviation || home.name?.slice(0, 2).toUpperCase()}
                     </div>
                     <span className="text-sm font-medium">{home.name}</span>
@@ -318,7 +319,7 @@ export default function LeagueDetail() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{away.name}</span>
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white"
-                      style={{ background: away.primaryColor || '#ff6b35' }}>
+                      style={{ background: away.primaryColor || '#ff7b35' }}>
                       {away.abbreviation || away.name?.slice(0, 2).toUpperCase()}
                     </div>
                   </div>
@@ -398,7 +399,7 @@ export default function LeagueDetail() {
                 <div key={game.id} className="flex items-center justify-between py-2 px-2 rounded-lg bg-[var(--bg-secondary)]/50">
                   <div className="flex items-center gap-2 flex-1">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                      style={{ background: home.primaryColor || '#ff6b35' }}>
+                      style={{ background: home.primaryColor || '#ff7b35' }}>
                       {home.abbreviation || home.name?.slice(0, 2).toUpperCase()}
                     </div>
                     <span className={`text-xs font-medium truncate ${homeWin ? 'text-white' : 'text-[var(--text-tertiary)]'}`}>{home.name}</span>
@@ -411,7 +412,7 @@ export default function LeagueDetail() {
                   <div className="flex items-center gap-2 flex-1 justify-end">
                     <span className={`text-xs font-medium truncate ${!homeWin ? 'text-white' : 'text-[var(--text-tertiary)]'}`}>{away.name}</span>
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-                      style={{ background: away.primaryColor || '#ff6b35' }}>
+                      style={{ background: away.primaryColor || '#ff7b35' }}>
                       {away.abbreviation || away.name?.slice(0, 2).toUpperCase()}
                     </div>
                   </div>
@@ -430,7 +431,7 @@ export default function LeagueDetail() {
             {sortedTeams.slice(0, 5).map((team, i) => (
               <Link key={team.id} to={`/teams/${team.id}`}
                 className="flex items-center gap-2 py-1.5 text-xs hover:bg-[var(--bg-secondary)] px-1.5 rounded-lg transition-colors">
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${i < 3 ? 'bg-gradient-to-br from-[#ff6b35] to-[#ff2d55] text-white' : 'text-[var(--text-tertiary)]'}`}>{i + 1}</span>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${i < 3 ? 'bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] text-white' : 'text-[var(--text-tertiary)]'}`}>{i + 1}</span>
                 <span className="font-medium flex-1 truncate">{team.name}</span>
                 <span className="text-[var(--text-tertiary)] text-[10px]">{team.wins || 0}-{team.losses || 0}</span>
               </Link>
@@ -486,7 +487,7 @@ export default function LeagueDetail() {
           <div className="space-y-2">
             {news.slice(0, 4).map((item, i) => (
               <div key={i} className="flex items-start gap-3 py-2 px-2 rounded-lg hover:bg-[var(--bg-secondary)]/50 transition-colors">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff6b35]/20 to-[#ff2d55]/20 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff7b35]/20 to-[#e83a4b]/20 flex items-center justify-center shrink-0 mt-0.5">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
                   </svg>
