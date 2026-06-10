@@ -7,6 +7,14 @@ import { uid, teamsCol, teamDoc, teamPlayersCol, teamPlayerDoc, leagueDoc } from
 import { draftPlayers, createPlayer } from '../engine/gameEngine';
 import { generateLineupOptimization, generateDraftRecommendation } from '../engine/aiEngine';
 
+const POSITION_ELIGIBILITY = {
+  PG: ['PG', 'SG'],
+  SG: ['PG', 'SG', 'SF'],
+  SF: ['SG', 'SF', 'PF'],
+  PF: ['SF', 'PF', 'C'],
+  C: ['PF', 'C'],
+};
+
 const COLORS = [
   { primary: '#1a1a2e', secondary: '#e94560', name: 'Classic' },
   { primary: '#16213e', secondary: '#0f3460', name: 'Ocean' },
@@ -34,6 +42,8 @@ export default function TeamDetail() {
   const [selectedStarter, setSelectedStarter] = useState(null);
   const [swapAnim, setSwapAnim] = useState({});
   const [swapping, setSwapping] = useState(false);
+  const [showPositionModal, setShowPositionModal] = useState(false);
+  const [modalMessage, setModalMessage] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -101,6 +111,15 @@ export default function TeamDetail() {
 
   const handleSwapPlayers = async (starter, benchPlayer) => {
     if (swapping || !starter || !benchPlayer) return;
+
+    const eligible = (benchPlayer.canPlay || POSITION_ELIGIBILITY[benchPlayer.primaryPosition] || POSITION_ELIGIBILITY[benchPlayer.position] || []);
+    if (!eligible.includes(starter.primaryPosition)) {
+      setModalMessage(`${benchPlayer.firstName} ${benchPlayer.lastName} (${benchPlayer.primaryPosition}) can't play ${starter.primaryPosition}. Positions can only overlap by one spot up or down.`);
+      setShowPositionModal(true);
+      setSelectedStarter(null);
+      return;
+    }
+
     setSwapping(true);
     setSwapAnim({ [starter.id]: true, [benchPlayer.id]: true });
 
@@ -419,6 +438,20 @@ export default function TeamDetail() {
               })}
             </div>
           )}
+        </div>
+      )}
+      {showPositionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => { setShowPositionModal(false); setSelectedStarter(null); }}>
+          <div className="glass-card p-6 w-full max-w-sm animate-scale-in space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              </div>
+              <h3 className="font-display text-xl tracking-wider">Position Mismatch</h3>
+              <p className="text-sm text-[var(--text-secondary)]">{modalMessage}</p>
+            </div>
+            <button onClick={() => { setShowPositionModal(false); setSelectedStarter(null); }} className="btn-glow w-full py-2.5 text-sm">Got it</button>
+          </div>
         </div>
       )}
     </div>
