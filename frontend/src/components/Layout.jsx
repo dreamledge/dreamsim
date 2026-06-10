@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
@@ -26,15 +26,16 @@ const navItems = [
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col min-h-screen pb-20 noise-overlay">
       <header className="glass-strong sticky top-0 z-50 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-[10px] font-bold font-display text-white shadow-lg">DL</div>
-            <h1 className="font-display text-xl tracking-wider text-white">Dynasty Sim</h1>
-          </div>
+          <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white hover:text-[var(--accent-orange)] transition-colors">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            <span className="text-sm font-medium">Back</span>
+          </button>
           <div className="flex items-center gap-3">
             {user?.isPremium ? (
               <span className="badge badge-premium">Premium</span>
