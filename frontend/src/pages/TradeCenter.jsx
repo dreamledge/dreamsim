@@ -26,11 +26,11 @@ export default function TradeCenter() {
       const allTeams = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       setTeams(allTeams);
       const my = allTeams.find(t => t.userId === user.id);
-      setUserTeam(my || null);
       if (my) {
         const pSnap = await getDocs(teamPlayersCol(my.id));
         setMyPlayers(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       }
+      setUserTeam(my || null);
     };
     load();
   }, [leagueId, user]);
