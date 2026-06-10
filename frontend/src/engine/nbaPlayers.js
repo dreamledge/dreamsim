@@ -394,7 +394,7 @@ function mapPosition(nbaPos) {
 
 function calcOverall(ppg, rpg, apg, spg, bpg, fgpct, tpct) {
   const score = ppg * 1.8 + rpg * 1.3 + apg * 1.4 + spg * 3.5 + bpg * 3.5 + (fgpct - 0.4) * 120 + (tpct - 0.3) * 80;
-  return clamp(Math.round(score + 20), 40, 99);
+  return clamp(Math.round(score), 40, 99);
 }
 
 function calcAttr(ppg, rpg, apg, spg, bpg, fgpct, tpct, type) {
@@ -491,49 +491,14 @@ async function fetchApiAverages(playerIds) {
 /* ─── Public API ─── */
 
 export async function ensureNbaPool() {
+  const pool = NBA_PLAYER_POOL.players || [];
+  if (pool.length > 0) return pool.length;
   try {
     const snap = await getDoc(doc(db, NBA_POOL_DOC));
-    const now = Date.now();
-
-    if (snap.exists() && (now - (snap.data().lastUpdated || 0)) < CACHE_TTL) {
-      return snap.data().players.length;
-    }
-
-    const poolPlayers = NBA_PLAYER_POOL.players || [];
-    if (poolPlayers.length > 0) {
-      await setDoc(doc(db, NBA_POOL_DOC), { players: poolPlayers, lastUpdated: now });
-      return poolPlayers.length;
-    }
-
-    const teamBySlug = Object.fromEntries(NBA_TEAMS.map(t => [t.slug, t.id]));
-
-    const twokPlayers = await fetch2kPlayers();
-    if (twokPlayers && twokPlayers.length > 0) {
-      const mapped = twokPlayers.map(p => {
-        const nbaTeamId = teamBySlug[p.teamSlug] || null;
-        return map2kToGamePlayer(p, nbaTeamId);
-      });
-      await setDoc(doc(db, NBA_POOL_DOC), { players: mapped, lastUpdated: now });
-      return mapped.length;
-    }
-
-    const mapped = NBA_PLAYERS.map(p => mapToGamePlayer(p));
-    await setDoc(doc(db, NBA_POOL_DOC), { players: mapped, lastUpdated: now });
-    return mapped.length;
-  } catch (err) {
-    console.error('NBA pool error:', err);
-    if (NBA_PLAYER_POOL.players?.length > 0) {
-      try {
-        await setDoc(doc(db, NBA_POOL_DOC), { players: NBA_PLAYER_POOL.players, lastUpdated: Date.now() });
-        return NBA_PLAYER_POOL.players.length;
-      } catch {}
-    }
-    const mapped = NBA_PLAYERS.map(p => mapToGamePlayer(p));
-    try {
-      await setDoc(doc(db, NBA_POOL_DOC), { players: mapped, lastUpdated: Date.now() });
-    } catch {}
-    return mapped.length;
-  }
+    if (snap.exists()) return snap.data().players?.length || 0;
+  } catch {}
+  const mapped = NBA_PLAYERS.map(p => mapToGamePlayer(p));
+  return mapped.length;
 }
 
 export async function getNbaPlayerPool() {
@@ -545,17 +510,10 @@ export async function getNbaPlayerPool() {
 }
 
 export async function draftNbaPlayers(count = 5) {
-  let pool = await getNbaPlayerPool();
-  if (pool.length === 0) {
-    await ensureNbaPool();
-    pool = await getNbaPlayerPool();
-  }
+  const pool = NBA_PLAYER_POOL.players || [];
   if (pool.length === 0) return [];
-
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  const selected = shuffled.slice(0, count);
-
-  return selected;
+  return shuffled.slice(0, count);
 }
 
 export function parseHeight(str) {
