@@ -182,6 +182,34 @@ export default function LeagueDetail() {
     }
   };
 
+  const handleStartOffseason = async () => {
+    if (!league) return;
+    try {
+      await updateDoc(leagueDoc(id), { offseason: true });
+      setLeague(prev => ({ ...prev, offseason: true }));
+    } catch (e) {
+      console.error('Start offseason error:', e);
+    }
+  };
+
+  const handleEndOffseason = async () => {
+    if (!league) return;
+    try {
+      const newSeasonId = uid();
+      const nextNumber = (league.currentSeason || 1) + 1;
+      await setDoc(doc(db, 'seasons', newSeasonId), {
+        leagueId: id, seasonNumber: nextNumber,
+        status: 'pregame', currentWeek: 0, totalWeeks: 24,
+        createdAt: new Date().toISOString(),
+      });
+      await updateDoc(leagueDoc(id), { currentSeason: nextNumber, offseason: false });
+      setLeague(prev => ({ ...prev, currentSeason: nextNumber, offseason: false }));
+      load();
+    } catch (e) {
+      console.error('End offseason error:', e);
+    }
+  };
+
   const getPredictions = () => {
     const preds = generateSeasonPrediction(teams);
     setPredictions(preds);
@@ -381,6 +409,18 @@ export default function LeagueDetail() {
           </button>
           <button onClick={simAll} disabled={simming} className="flex-1 btn-ghost py-2.5 text-sm">Sim All</button>
         </div>
+      )}
+
+      {/* ── Offseason Controls ── */}
+      {isCommissioner && season?.status === 'completed' && !league?.offseason && (
+        <button onClick={handleStartOffseason} className="btn-glow w-full py-2.5 text-sm">
+          Start Offseason
+        </button>
+      )}
+      {isCommissioner && league?.offseason === true && (
+        <button onClick={handleEndOffseason} className="btn-glow w-full py-2.5 text-sm">
+          End Offseason
+        </button>
       )}
 
       {/* ── Recent Games ── */}
