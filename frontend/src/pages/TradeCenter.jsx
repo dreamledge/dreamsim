@@ -7,12 +7,18 @@ import { generateTradeAnalysis } from '../engine/aiEngine';
 
 function PlayerCheckbox({ p, selected, toggle, label }) {
   return (
-    <label onClick={toggle} className="flex items-center gap-2.5 text-sm py-1.5 px-2 rounded-lg hover:bg-[var(--bg-secondary)] cursor-pointer transition-colors">
-      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${selected ? 'bg-[var(--accent-orange)] border-[var(--accent-orange)]' : 'border-[var(--text-tertiary)]'}`}>
+    <label onClick={toggle} className={`flex items-center gap-2 text-sm py-2 px-3 rounded-xl cursor-pointer transition-all duration-200 group border ${
+      selected
+        ? 'bg-[var(--accent-orange)]/5 border-[var(--accent-orange)]/20 shadow-[0_0_8px_rgba(255,107,53,0.08)]'
+        : 'bg-[var(--bg-secondary)]/40 border-[var(--border-subtle)]/40 hover:bg-[var(--bg-secondary)] hover:border-[var(--border-subtle)]'
+    }`}>
+      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all duration-200 ${
+        selected ? 'bg-[var(--accent-orange)] border-[var(--accent-orange)] shadow-[0_0_6px_rgba(255,107,53,0.3)]' : 'border-[var(--text-tertiary)] group-hover:border-[var(--text-secondary)]'
+      }`}>
         {selected && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
       </div>
-      <span>{label || `${p.firstName} ${p.lastName} (${p.position})`}</span>
-      <span className="text-[var(--text-tertiary)] ml-auto text-xs">OVR {p.overall}</span>
+      <span className="flex-1 text-center leading-tight truncate min-w-0">{label || `${p.firstName} ${p.lastName}`}</span>
+      <span className="text-[var(--text-tertiary)] text-[11px] font-mono w-[52px] text-right shrink-0">{p.position} · {p.overall}</span>
     </label>
   );
 }
@@ -401,10 +407,10 @@ export default function TradeCenter() {
           </div>
         )}
 
-        <div className={`grid gap-3 ${selectedTarget ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <div className="space-y-4">
           <div>
-            <p className="text-xs text-[var(--text-tertiary)] mb-2 font-medium tracking-wide uppercase">{userTeam.name}</p>
-            <div className="space-y-0.5 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+            <p className="text-xs text-[var(--text-tertiary)] mb-2.5 font-medium tracking-wide uppercase text-center">{userTeam.name}</p>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar">
               {myPlayers.map(p => (
                 <PlayerCheckbox key={p.id} p={p} selected={selectedMy.includes(p.id)} toggle={() => toggleMy(p.id)} />
               ))}
@@ -413,8 +419,12 @@ export default function TradeCenter() {
 
           {selectedTarget && targetPlayers.length > 0 && (
             <div>
-              <p className="text-xs text-[var(--text-tertiary)] mb-2 font-medium tracking-wide uppercase">{getTeamName(selectedTarget)}</p>
-              <div className="space-y-0.5 max-h-40 overflow-y-auto pr-1">
+              <div className="flex items-center gap-2 mb-2.5 justify-center">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-subtle)] to-transparent" />
+                <p className="text-xs text-[var(--text-tertiary)] font-medium tracking-wide uppercase">{getTeamName(selectedTarget)}</p>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--border-subtle)] to-transparent" />
+              </div>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
                 {targetPlayers.map(p => (
                   <PlayerCheckbox key={p.id} p={p} selected={selectedTargetPlayers.includes(p.id)} toggle={() => toggleTarget(p.id)} />
                 ))}

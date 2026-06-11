@@ -15,6 +15,9 @@ const POSITION_ELIGIBILITY = {
   C: ['PF', 'C'],
 };
 
+const POSITION_SLOT = { 0: 'PG', 1: 'SG', 2: 'SF', 3: 'PF', 4: 'C' };
+const POSITION_INDEX = { PG: 0, SG: 1, SF: 2, PF: 3, C: 4 };
+
 const COLORS = [
   { primary: '#1a1a2e', secondary: '#e94560', name: 'Classic' },
   { primary: '#16213e', secondary: '#0f3460', name: 'Ocean' },
@@ -54,7 +57,68 @@ export default function TeamDetail() {
         setTeam(t);
 
         const pSnap = await getDocs(query(teamPlayersCol(id), where('seasonId', '==', t.seasonId || 1)));
-        setPlayers(pSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        let loadedPlayers = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        let working = loadedPlayers.map(p => ({ ...p }));
+        const taken = new Set();
+        working = working.map(p => {
+          if (!p.isStarter || p.lineupPosition === null || p.lineupPosition === undefined) return { ...p, isStarter: 0, lineupPosition: null };
+          const pos = p.primaryPosition || p.position;
+          const eligible = pos ? (POSITION_ELIGIBILITY[pos] || []) : [];
+          const slotPos = POSITION_SLOT[p.lineupPosition];
+          if (slotPos && eligible.includes(slotPos) && !taken.has(p.lineupPosition)) {
+            taken.add(p.lineupPosition);
+            return p;
+          }
+          const preferred = pos ? POSITION_INDEX[pos] : undefined;
+          if (preferred !== undefined && !taken.has(preferred)) { taken.add(preferred); return { ...p, lineupPosition: preferred }; }
+          const free = eligible.find(e => { const i = POSITION_INDEX[e]; return i !== undefined && !taken.has(i); });
+          if (free !== undefined) { taken.add(POSITION_INDEX[free]); return { ...p, lineupPosition: POSITION_INDEX[free] }; }
+          return { ...p, isStarter: 0, lineupPosition: null };
+        });
+        let starters = working.filter(p => p.isStarter).sort((a, b) => (b.overall || 0) - (a.overall || 0));
+        if (starters.length > 5) {
+          const keep = new Set(starters.slice(0, 5).map(p => p.id));
+          working = working.map(p => keep.has(p.id) ? p : { ...p, isStarter: 0, lineupPosition: null });
+        }
+        starters = working.filter(p => p.isStarter);
+        if (starters.length < 5) {
+          const bench = working.filter(p => !p.isStarter).sort((a, b) => (b.overall || 0) - (a.overall || 0));
+          const filled = new Set(starters.map(p => p.lineupPosition));
+          for (let slot = 0; slot < 5; slot++) {
+            if (filled.has(slot)) continue;
+            const posName = POSITION_SLOT[slot];
+            const idx = bench.findIndex(p => {
+              const pos = p.primaryPosition || p.position;
+              const e = pos ? (POSITION_ELIGIBILITY[pos] || []) : [];
+              return e.includes(posName);
+            });
+            if (idx !== -1) {
+              bench[idx].isStarter = 1;
+              bench[idx].lineupPosition = slot;
+              filled.add(slot);
+            }
+          }
+          for (let slot = 0; slot < 5; slot++) {
+            if (filled.has(slot)) continue;
+            const idx = bench.findIndex(p => !p.isStarter);
+            if (idx !== -1) {
+              bench[idx].isStarter = 1;
+              bench[idx].lineupPosition = slot;
+              filled.add(slot);
+            }
+          }
+        }
+        const corrected = working;
+        const hasChanges = corrected.some((p, i) => p.lineupPosition !== loadedPlayers[i].lineupPosition || p.isStarter !== loadedPlayers[i].isStarter);
+        if (hasChanges) {
+          for (const p of corrected) {
+            const orig = loadedPlayers.find(o => o.id === p.id);
+            if (orig && (orig.lineupPosition !== p.lineupPosition || orig.isStarter !== p.isStarter)) {
+              updateDoc(teamPlayerDoc(id, p.id), { lineupPosition: p.lineupPosition, isStarter: p.isStarter }).catch(() => {});
+            }
+          }
+        }
+        setPlayers(corrected);
 
         if (t.leagueId) {
           const lSnap = await getDoc(leagueDoc(t.leagueId));
@@ -83,12 +147,20 @@ export default function TeamDetail() {
     setDrafting(true);
     try {
       const newPlayers = draftPlayers(5);
+      const takenSlots = new Set(players.filter(p => p.isStarter).map(p => p.lineupPosition));
       for (const p of newPlayers) {
         const pId = uid();
+        const pos = p.primaryPosition || p.position;
+        const eligible = POSITION_ELIGIBILITY[pos] || [];
+        let slot = null;
+        const preferred = POSITION_INDEX[pos];
+        if (preferred !== undefined && !takenSlots.has(preferred)) slot = preferred;
+        else slot = eligible.find(e => { const i = POSITION_INDEX[e]; return i !== undefined && !takenSlots.has(i); }) ?? null;
+        if (slot !== null) takenSlots.add(slot);
         await setDoc(doc(teamPlayersCol(id), pId), {
           ...p, teamId: id, seasonId: team.seasonId || 1,
-          isStarter: players.length + newPlayers.indexOf(p) < 5 ? 1 : 0,
-          lineupPosition: players.length + newPlayers.indexOf(p) < 5 ? players.length + newPlayers.indexOf(p) : null,
+          isStarter: slot !== null ? 1 : 0,
+          lineupPosition: slot,
         });
         await setDoc(doc(db, 'players', p.id), { ...p, teamId: id });
       }
@@ -112,9 +184,11 @@ export default function TeamDetail() {
   const handleSwapPlayers = async (starter, benchPlayer) => {
     if (swapping || !starter || !benchPlayer) return;
 
-    const eligible = (benchPlayer.canPlay || POSITION_ELIGIBILITY[benchPlayer.primaryPosition] || POSITION_ELIGIBILITY[benchPlayer.position] || []);
-    if (!eligible.includes(starter.primaryPosition)) {
-      setModalMessage(`${benchPlayer.firstName} ${benchPlayer.lastName} (${benchPlayer.primaryPosition}) can't play ${starter.primaryPosition}. Positions can only overlap by one spot up or down.`);
+    const benchPos = benchPlayer.primaryPosition || benchPlayer.position;
+    const starterPosName = starter.primaryPosition || starter.position;
+    const eligible = benchPlayer.canPlay || POSITION_ELIGIBILITY[benchPos] || [];
+    if (!eligible.includes(starterPosName)) {
+      setModalMessage(`${benchPlayer.firstName} ${benchPlayer.lastName} (${benchPos}) can't play ${starterPosName}. Positions can only overlap by one spot up or down.`);
       setShowPositionModal(true);
       setSelectedStarter(null);
       return;

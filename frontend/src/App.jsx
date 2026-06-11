@@ -40,7 +40,7 @@ export default function App() {
         <Route path="/leagues/:id/standings" element={<ProtectedRoute><Layout><Standings /></Layout></ProtectedRoute>} />
         <Route path="/leagues/:leagueId/season/:seasonId" element={<ProtectedRoute><Layout><SeasonView /></Layout></ProtectedRoute>} />
         <Route path="/leagues/:leagueId/news" element={<ProtectedRoute><Layout><NewsFeed /></Layout></ProtectedRoute>} />
-        <Route path="/leagues/:leagueId/draft" element={<ProtectedRoute><Layout><LeagueDraft /></Layout></ProtectedRoute>} />
+        <Route path="/leagues/:id/draft" element={<ProtectedRoute><Layout><LeagueDraft /></Layout></ProtectedRoute>} />
         <Route path="/teams/create" element={<ProtectedRoute><Layout><CreateTeam /></Layout></ProtectedRoute>} />
         <Route path="/teams/:id" element={<ProtectedRoute><Layout><TeamDetail /></Layout></ProtectedRoute>} />
         <Route path="/draft" element={<ProtectedRoute><Layout><Draft /></Layout></ProtectedRoute>} />
