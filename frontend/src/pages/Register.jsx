@@ -11,11 +11,12 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    audioManager.play();
     try {
       await register(form.email, form.password, form.displayName);
-      audioManager.play();
       navigate('/');
     } catch (err) {
+      audioManager.pause();
       setError(err.message);
     }
   };

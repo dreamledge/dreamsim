@@ -12,11 +12,12 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    audioManager.play();
     try {
       await login(email, password);
-      audioManager.play();
       navigate('/');
     } catch (err) {
+      audioManager.pause();
       setError(err.message);
     }
   };

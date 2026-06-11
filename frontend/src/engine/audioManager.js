@@ -2,12 +2,6 @@ const STORAGE_KEY = 'bg-music-time';
 
 class AudioManager {
   constructor() {
-    this.audio = null;
-    this.interval = null;
-  }
-
-  _create() {
-    if (this.audio) return;
     this.audio = new Audio('/miami.mp3');
     this.audio.loop = true;
     this.audio.preload = 'auto';
@@ -21,7 +15,6 @@ class AudioManager {
   }
 
   play() {
-    this._create();
     if (this.audio.paused) {
       const saved = parseFloat(localStorage.getItem(STORAGE_KEY));
       if (saved && !isNaN(saved)) {
