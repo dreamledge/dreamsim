@@ -20,6 +20,7 @@ import LeagueNews from './pages/LeagueNews';
 import LeagueDraft from './pages/LeagueDraft';
 import Standings from './pages/Standings';
 import FreeAgents from './pages/FreeAgents';
+import AudioProvider from './components/AudioProvider';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -31,6 +32,7 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white">
+      <AudioProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -52,6 +54,7 @@ export default function App() {
         <Route path="/stats" element={<ProtectedRoute><Layout><Stats /></Layout></ProtectedRoute>} />
         <Route path="/store" element={<ProtectedRoute><Layout><Store /></Layout></ProtectedRoute>} />
       </Routes>
+      </AudioProvider>
     </div>
   );
 }
