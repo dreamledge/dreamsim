@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { doc, getDoc, getDocs, query, where, collection, orderBy, limit } from 'firebase/firestore';
+import { getDoc, getDocs, query, where, collection, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { leagueDoc, teamsCol, teamPlayersCol } from '../lib/firestore';
@@ -66,6 +66,8 @@ export default function FreeAgents() {
             } else {
               setSigningStatus({ enabled: false, message: 'Free agency is currently closed.' });
             }
+          } else {
+            setSigningStatus({ enabled: false, message: 'No season found — free agency opens after the first draft.' });
           }
         } catch (e) {}
       } catch (e) {
@@ -148,7 +150,7 @@ export default function FreeAgents() {
       <div className="space-y-1 animate-slide-up">
         <p className="text-xs text-[var(--text-tertiary)] font-medium mb-2">{filtered.length} players match filters</p>
         <div className="space-y-1 max-h-[600px] overflow-y-auto">
-          {filtered.sort((a, b) => (b.overall || 0) - (a.overall || 0)).map((p, i) => (
+          {[...filtered].sort((a, b) => (b.overall || 0) - (a.overall || 0)).map((p, i) => (
             <div key={p.playerId} className="glass-card p-3 flex items-center gap-3 transition-all duration-200 hover:bg-[var(--bg-tertiary)]" style={{animationDelay: `${i * 0.02}s`}}>
               <div className="rating-circle rating-circle-sm shrink-0" style={{'--pct': `${p.overall || 50}%`}}>
                 <span className="text-white text-xs">{p.overall || '-'}</span>
