@@ -4,7 +4,6 @@ import { doc, setDoc, getDoc, getDocs, query, where, updateDoc, collection } fro
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { uid, teamsCol, teamDoc, teamPlayersCol, leagueDoc, leagueMemberDoc } from '../lib/firestore';
-import { draftNbaPlayers, ensureNbaPool } from '../engine/gameEngine';
 
 const COLORS = [
   { primary: '#1a1a2e', secondary: '#e94560', name: 'Classic' },
@@ -31,7 +30,6 @@ export default function CreateTeam() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [initializing, setInitializing] = useState(false);
 
   const randomName = () => {
     const city = CITY_NAMES[Math.floor(Math.random() * CITY_NAMES.length)];
@@ -64,17 +62,6 @@ export default function CreateTeam() {
         arenaName: form.arenaName || `${form.name} Arena`, seasonId: leagueSnap.data().currentSeason || 1,
         wins: 0, losses: 0, isAi: 0, prestige: 50, createdAt: new Date().toISOString(),
       });
-
-      await ensureNbaPool();
-      const newPlayers = await draftNbaPlayers(5);
-      for (let i = 0; i < newPlayers.length; i++) {
-        const p = newPlayers[i];
-        const pId = uid();
-        await setDoc(doc(teamPlayersCol(teamId), pId), {
-          ...p, teamId, seasonId: leagueSnap.data().currentSeason || 1,
-          isStarter: i < 5 ? 1 : 0, lineupPosition: i < 5 ? i : null,
-        });
-      }
 
       await setDoc(leagueMemberDoc(form.leagueId, user.id), {
         userId: user.id,
@@ -131,8 +118,8 @@ export default function CreateTeam() {
           <input type="text" value={form.arenaName} onChange={e => setForm(f => ({ ...f, arenaName: e.target.value }))} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[var(--accent-orange)] transition-all placeholder:text-[var(--text-tertiary)]" placeholder="Dragons Den" />
         </div>
 
-        <button type="submit" disabled={loading || initializing} className="btn-glow w-full py-2.5 text-sm tracking-wide">
-          {loading ? 'Creating...' : initializing ? 'Loading NBA players...' : 'Create Team & Draft Players'}
+        <button type="submit" disabled={loading} className="btn-glow w-full py-2.5 text-sm tracking-wide">
+          {loading ? 'Creating...' : 'Create Team'}
         </button>
       </form>
     </div>
