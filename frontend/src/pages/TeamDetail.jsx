@@ -4,8 +4,7 @@ import { doc, getDoc, getDocs, collection, query, where, setDoc, updateDoc, orde
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { uid, teamsCol, teamDoc, teamPlayersCol, teamPlayerDoc, leagueDoc } from '../lib/firestore';
-import { draftPlayers, createPlayer } from '../engine/gameEngine';
-import { generateLineupOptimization, generateDraftRecommendation } from '../engine/aiEngine';
+import { generateLineupOptimization } from '../engine/aiEngine';
 
 const POSITION_ELIGIBILITY = {
   PG: ['PG', 'SG'],
@@ -40,8 +39,6 @@ export default function TeamDetail() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('roster');
   const [lineupOptimization, setLineupOptimization] = useState(null);
-  const [draftRec, setDraftRec] = useState(null);
-  const [drafting, setDrafting] = useState(false);
   const [selectedStarter, setSelectedStarter] = useState(null);
   const [swapAnim, setSwapAnim] = useState({});
   const [swapping, setSwapping] = useState(false);
@@ -143,42 +140,8 @@ export default function TeamDetail() {
     load();
   }, [id]);
 
-  const handleDraft = async () => {
-    setDrafting(true);
-    try {
-      const newPlayers = draftPlayers(5);
-      const takenSlots = new Set(players.filter(p => p.isStarter).map(p => p.lineupPosition));
-      for (const p of newPlayers) {
-        const pId = uid();
-        const pos = p.primaryPosition || p.position;
-        const eligible = POSITION_ELIGIBILITY[pos] || [];
-        let slot = null;
-        const preferred = POSITION_INDEX[pos];
-        if (preferred !== undefined && !takenSlots.has(preferred)) slot = preferred;
-        else slot = eligible.find(e => { const i = POSITION_INDEX[e]; return i !== undefined && !takenSlots.has(i); }) ?? null;
-        if (slot !== null) takenSlots.add(slot);
-        await setDoc(doc(teamPlayersCol(id), pId), {
-          ...p, teamId: id, seasonId: team.seasonId || 1,
-          isStarter: slot !== null ? 1 : 0,
-          lineupPosition: slot,
-        });
-        await setDoc(doc(db, 'players', p.id), { ...p, teamId: id });
-      }
-      alert(`Drafted ${newPlayers.length} new players!`);
-      window.location.reload();
-    } catch (err) {
-      alert(err.message);
-    }
-    setDrafting(false);
-  };
-
   const optimizeLineup = () => {
     setLineupOptimization(generateLineupOptimization(players));
-  };
-
-  const getDraftRec = () => {
-    const allPlayers = JSON.parse(sessionStorage.getItem('availablePlayers') || '[]');
-    setDraftRec(generateDraftRecommendation(allPlayers, players));
   };
 
   const handleSwapPlayers = async (starter, benchPlayer) => {
@@ -224,7 +187,6 @@ export default function TeamDetail() {
     { key: 'roster', label: 'Roster' },
     { key: 'lineup', label: 'Lineup' },
     { key: 'ai', label: 'AI Tools' },
-    { key: 'draft', label: 'Draft' },
     { key: 'games', label: 'Games' },
   ];
 
@@ -402,40 +364,10 @@ export default function TeamDetail() {
 
       {activeTab === 'ai' && (
         <div className="space-y-3 animate-fade-up" key="ai">
-          <button onClick={getDraftRec} className="btn-ghost w-full py-3 text-sm flex items-center justify-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-            AI Draft Recommendations
-          </button>
           <button onClick={optimizeLineup} className="btn-ghost w-full py-3 text-sm flex items-center justify-center gap-2">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
             AI Lineup Optimizer
           </button>
-          {draftRec && (
-            <div className="glass-card p-4 animate-slide-up">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="badge badge-ai">AI</span>
-                <h3 className="font-display text-lg tracking-wider">Draft Recommendations</h3>
-              </div>
-              <div className="space-y-2">
-                {draftRec.recommendations?.slice(0, 5).map((r, i) => (
-                  <div key={i} className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-xl p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="rating-circle rating-circle-sm" style={{'--pct': `${r.player?.overall || 50}%`} }>
-                          <span className="text-white text-xs">{r.player?.overall || '-'}</span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{r.player?.firstName} {r.player?.lastName} - {r.player?.position}</p>
-                          <p className="text-xs text-[var(--text-tertiary)]">Fit: {r.fitScore}%</p>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-xs text-[var(--accent-orange)] mt-1.5">{r.reason}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
           {lineupOptimization && (
             <div className="glass-card p-4 animate-slide-up">
               <div className="flex items-center gap-2 mb-3">
@@ -456,22 +388,6 @@ export default function TeamDetail() {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {activeTab === 'draft' && (
-        <div className="space-y-3 animate-fade-up" key="draft">
-          <button onClick={handleDraft} disabled={drafting} className="btn-glow w-full py-3 text-sm font-semibold">
-            {drafting ? 'Drafting...' : '✍️ Draft 5 New Players'}
-          </button>
-          <div className="glass-card p-4">
-            <h3 className="font-display text-lg tracking-wider mb-2">Draft Rules</h3>
-            <ul className="text-sm text-[var(--text-tertiary)] space-y-1.5">
-              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-orange)] flex-shrink-0" />Each draft gives you 5 new players</li>
-              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-orange)] flex-shrink-0" />Max roster size is 15 players</li>
-              <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-orange)] flex-shrink-0" />Players have random attributes and potential</li>
-            </ul>
-          </div>
         </div>
       )}
 
