@@ -84,7 +84,7 @@ export default function CreateTeam() {
 
         <div>
           <label className="text-xs text-[var(--text-secondary)] block mb-1.5 uppercase tracking-wider font-semibold">League ID</label>
-          <input type="text" value={form.leagueId} onChange={e => setForm(f => ({ ...f, leagueId: e.target.value }))} className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white focus:outline-none focus:border-[var(--accent-orange)] focus:shadow-[0_0_0_3px_rgba(255,107,53,0.1)] transition-all placeholder:text-[var(--text-tertiary)]" placeholder="Paste league ID" />
+          <input type="text" value={form.leagueId} readOnly className="w-full bg-[var(--bg-tertiary)] border border-[var(--border-subtle)] rounded-lg px-3 py-2.5 text-white/60 cursor-default select-all transition-all" />
         </div>
 
         <div className="flex gap-2 items-end">
