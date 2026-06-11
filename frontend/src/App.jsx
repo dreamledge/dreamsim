@@ -19,6 +19,7 @@ import NewsFeed from './pages/NewsFeed';
 import LeagueNews from './pages/LeagueNews';
 import LeagueDraft from './pages/LeagueDraft';
 import Standings from './pages/Standings';
+import FreeAgents from './pages/FreeAgents';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/leagues" element={<ProtectedRoute><Layout><LeagueList /></Layout></ProtectedRoute>} />
         <Route path="/leagues/create" element={<ProtectedRoute><Layout><CreateLeague /></Layout></ProtectedRoute>} />
         <Route path="/leagues/:id" element={<ProtectedRoute><Layout><LeagueDetail /></Layout></ProtectedRoute>} />
+        <Route path="/leagues/:id/freeagents" element={<ProtectedRoute><Layout><FreeAgents /></Layout></ProtectedRoute>} />
         <Route path="/leagues/:id/standings" element={<ProtectedRoute><Layout><Standings /></Layout></ProtectedRoute>} />
         <Route path="/leagues/:leagueId/season/:seasonId" element={<ProtectedRoute><Layout><SeasonView /></Layout></ProtectedRoute>} />
         <Route path="/leagues/:leagueId/news" element={<ProtectedRoute><Layout><NewsFeed /></Layout></ProtectedRoute>} />
