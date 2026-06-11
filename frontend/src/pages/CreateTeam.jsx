@@ -68,7 +68,7 @@ export default function CreateTeam() {
         role: 'member',
         joinedAt: new Date().toISOString(),
       }, { merge: true });
-      navigate(`/teams/${teamId}`);
+      navigate(`/leagues/${form.leagueId}`);
     } catch (err) {
       setError(err.message);
     } finally {
