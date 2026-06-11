@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { query, where, orderBy, getDocs, collection, doc, getDoc, limit } from 'firebase/firestore';
+import { query, where, orderBy, getDocs, collection, doc, getDoc, deleteDoc, limit } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
-import { leaguesCol, leagueDoc, leagueNewsCol, teamsCol } from '../lib/firestore';
+import { leaguesCol, leagueDoc, leagueNewsCol, teamsCol, teamPlayersCol } from '../lib/firestore';
 
 export default function Home() {
   const { user } = useAuth();
   const [userLeagues, setUserLeagues] = useState([]);
   const [newsMap, setNewsMap] = useState({});
   const [loading, setLoading] = useState(true);
+  const [leavingIds, setLeavingIds] = useState(new Set());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,6 +50,34 @@ export default function Home() {
     return () => clearTimeout(fallback);
   }, [user]);
 
+  const handleLeaveLeague = useCallback(async (e, league) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Are you sure you want to leave "${league.name}"?`)) return;
+    setLeavingIds(prev => new Set(prev).add(league.id));
+    try {
+      const teamsSnap = await getDocs(query(
+        teamsCol(),
+        where('userId', '==', user.id),
+        where('leagueId', '==', league.id)
+      ));
+      for (const teamDocSnap of teamsSnap.docs) {
+        const playersSnap = await getDocs(teamPlayersCol(teamDocSnap.id));
+        for (const p of playersSnap.docs) {
+          await deleteDoc(p.ref);
+        }
+        await deleteDoc(teamDocSnap.ref);
+      }
+      setUserLeagues(prev => prev.filter(l => l.id !== league.id));
+    } catch (err) {
+      console.error('Failed to leave league:', err);
+    } finally {
+      setLeavingIds(prev => { const nxt = new Set(prev); nxt.delete(league.id); return nxt; });
+    }
+  }, [user]);
+
+  const isCommissioner = (league) => league.commissionerId === user.id;
+
   return (
     <div className="space-y-5 stagger">
       <div className="flex items-center justify-between animate-fade-up">
@@ -87,7 +116,18 @@ export default function Home() {
                       <p className="text-xs text-[var(--text-tertiary)]">Season {league.currentSeason || 1}</p>
                     </div>
                   </div>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accent-orange)] opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-x-1 group-hover:translate-x-0"><polyline points="9 18 15 12 9 6"/></svg>
+                  <div className="flex items-center gap-2">
+                    {!isCommissioner(league) && (
+                      <button
+                        onClick={(e) => handleLeaveLeague(e, league)}
+                        disabled={leavingIds.has(league.id)}
+                        className="px-2.5 py-1 text-xs rounded-md bg-red-500/20 hover:bg-red-500/40 text-red-400 transition-all disabled:opacity-50"
+                      >
+                        {leavingIds.has(league.id) ? 'Leaving...' : 'Leave'}
+                      </button>
+                    )}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accent-orange)] opacity-0 group-hover:opacity-100 transition-all duration-200 -translate-x-1 group-hover:translate-x-0"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
                 </Link>
               ))}
             </div>
