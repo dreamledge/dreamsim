@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import audioManager from '../engine/audioManager';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -13,6 +14,7 @@ export default function Login() {
     e.preventDefault();
     try {
       await login(email, password);
+      audioManager.play();
       navigate('/');
     } catch (err) {
       setError(err.message);

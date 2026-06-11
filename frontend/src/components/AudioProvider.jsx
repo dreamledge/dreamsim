@@ -6,9 +6,7 @@ export default function AudioProvider({ children }) {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      audioManager.play();
-    } else {
+    if (!user) {
       audioManager.pause();
     }
   }, [!!user]);

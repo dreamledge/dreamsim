@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import audioManager from '../engine/audioManager';
 
 export default function Register() {
   const [form, setForm] = useState({ email: '', password: '', displayName: '' });
@@ -12,6 +13,7 @@ export default function Register() {
     e.preventDefault();
     try {
       await register(form.email, form.password, form.displayName);
+      audioManager.play();
       navigate('/');
     } catch (err) {
       setError(err.message);
