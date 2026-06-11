@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { query, where, orderBy, getDocs, collection, doc, getDoc, deleteDoc, limit } from 'firebase/firestore';
+import { query, where, orderBy, getDocs, collection, doc, getDoc, deleteDoc, limit, writeBatch } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
-import { leaguesCol, leagueDoc, leagueNewsCol, teamsCol, teamPlayersCol } from '../lib/firestore';
+import { leaguesCol, leagueDoc, leagueNewsCol, leagueMembersCol, teamsCol, teamPlayersCol, championshipsCol, draftsCol, draftPicksCol } from '../lib/firestore';
 
 export default function Home() {
   const { user } = useAuth();
@@ -11,6 +11,7 @@ export default function Home() {
   const [newsMap, setNewsMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [leavingIds, setLeavingIds] = useState(new Set());
+  const [deletingIds, setDeletingIds] = useState(new Set());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -78,6 +79,46 @@ export default function Home() {
 
   const isCommissioner = (league) => league.commissionerId === user.id;
 
+  const handleDeleteLeague = useCallback(async (e, league) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Delete "${league.name}" and all its data? This cannot be undone.`)) return;
+    setDeletingIds(prev => new Set(prev).add(league.id));
+    try {
+      const teamsSnap = await getDocs(query(teamsCol(), where('leagueId', '==', league.id)));
+      for (const team of teamsSnap.docs) {
+        const playersSnap = await getDocs(teamPlayersCol(team.id));
+        for (const p of playersSnap.docs) {
+          await deleteDoc(p.ref);
+        }
+        await deleteDoc(team.ref);
+      }
+
+      const membersSnap = await getDocs(leagueMembersCol(league.id));
+      for (const m of membersSnap.docs) await deleteDoc(m.ref);
+
+      const newsSnap = await getDocs(leagueNewsCol(league.id));
+      for (const n of newsSnap.docs) await deleteDoc(n.ref);
+
+      const champSnap = await getDocs(championshipsCol(league.id));
+      for (const c of champSnap.docs) await deleteDoc(c.ref);
+
+      const draftsSnap = await getDocs(draftsCol(league.id));
+      for (const d of draftsSnap.docs) {
+        const picksSnap = await getDocs(draftPicksCol(league.id, d.id));
+        for (const p of picksSnap.docs) await deleteDoc(p.ref);
+        await deleteDoc(d.ref);
+      }
+
+      await deleteDoc(leagueDoc(league.id));
+      setUserLeagues(prev => prev.filter(l => l.id !== league.id));
+    } catch (err) {
+      console.error('Failed to delete league:', err);
+    } finally {
+      setDeletingIds(prev => { const nxt = new Set(prev); nxt.delete(league.id); return nxt; });
+    }
+  }, []);
+
   return (
     <div className="space-y-5 stagger">
       <div className="flex items-center justify-between animate-fade-up">
@@ -117,7 +158,15 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!isCommissioner(league) && (
+                    {isCommissioner(league) ? (
+                      <button
+                        onClick={(e) => handleDeleteLeague(e, league)}
+                        disabled={deletingIds.has(league.id)}
+                        className="px-2.5 py-1 text-xs rounded-md bg-red-500/20 hover:bg-red-500/40 text-red-400 transition-all disabled:opacity-50"
+                      >
+                        {deletingIds.has(league.id) ? 'Deleting...' : 'Delete'}
+                      </button>
+                    ) : (
                       <button
                         onClick={(e) => handleLeaveLeague(e, league)}
                         disabled={leavingIds.has(league.id)}
