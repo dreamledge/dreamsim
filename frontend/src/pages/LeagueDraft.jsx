@@ -227,20 +227,22 @@ export default function LeagueDraft() {
   useEffect(() => {
     if (!draft || draft.status !== 'joining' || !draft.joinDeadline) {
       setCountdown('');
+      if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
       return;
     }
     const update = () => {
       const diff = new Date(draft.joinDeadline).getTime() - Date.now();
       if (diff <= 0) {
         setCountdown('Draft starting...');
+        if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
         updateDoc(draftDoc(id, draft.id), { status: 'live', pickStartedAt: new Date().toISOString() });
         return;
       }
       setCountdown(Math.ceil(diff / 1000) + 's');
     };
     update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
+    countdownRef.current = setInterval(update, 1000);
+    return () => { if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; } };
   }, [draft?.status, draft?.joinDeadline]);
 
   const handleSchedule = async (scheduledDate) => {
