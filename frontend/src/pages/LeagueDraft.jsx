@@ -188,7 +188,7 @@ export default function LeagueDraft() {
     const isAi = team && (team.isAi === 1 || team.userId === 'ai');
     const userHasJoined = team && draft?.joinedUsers?.includes(team.userId);
     if (isAi || (team && team.userId !== 'ai' && !userHasJoined)) {
-      handleAutoPick(currentPick);
+      setTimeout(() => handleAutoPick(currentPick), 0);
       return;
     }
 
@@ -202,7 +202,7 @@ export default function LeagueDraft() {
     updateTimer();
     timerRef.current = setInterval(updateTimer, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [draft?.currentPick, draft?.pickStartedAt, picks.length, draft?.status, teams, draft?.joinedUsers]);
+  }, [draft?.currentPick, draft?.pickStartedAt, picks.filter(p => p.status === 'waiting').length, draft?.status, teams, draft?.joinedUsers]);
 
   useEffect(() => {
     if (!draft || draft.status !== 'scheduled' || !draft.scheduledTime) {
@@ -427,8 +427,10 @@ export default function LeagueDraft() {
       await deleteDoc(doc(db, 'leagues', id, 'drafts', draft.id, 'players', player.firestoreId || player.id));
     } catch (e) {}
 
-    const realTotalPicks = teams.length * (draft?.totalRounds || 3);
-    const nextPick = draft.currentPick + 1;
+    const draftSnap = await getDoc(draftDoc(id, draft.id));
+    const freshDraft = draftSnap.data();
+    const realTotalPicks = teams.length * (freshDraft?.totalRounds || 3);
+    const nextPick = (freshDraft?.currentPick || draft.currentPick) + 1;
     if (nextPick > realTotalPicks) {
       await updateDoc(draftDoc(id, draft.id), {
         status: 'completed',
@@ -484,8 +486,10 @@ export default function LeagueDraft() {
       await deleteDoc(doc(db, 'leagues', id, 'drafts', draft.id, 'players', best.firestoreId || best.id));
     } catch (e) {}
 
-    const realTotalPicks = teams.length * (draft?.totalRounds || 3);
-    const nextPick = draft.currentPick + 1;
+    const draftSnap = await getDoc(draftDoc(id, draft.id));
+    const freshDraft = draftSnap.data();
+    const realTotalPicks = teams.length * (freshDraft?.totalRounds || 3);
+    const nextPick = (freshDraft?.currentPick || draft.currentPick) + 1;
     if (nextPick > realTotalPicks) {
       await updateDoc(draftDoc(id, draft.id), {
         status: 'completed',

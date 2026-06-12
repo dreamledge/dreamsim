@@ -26,7 +26,7 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex flex-col min-h-screen pb-20 noise-overlay">
-      <header className="glass-strong sticky top-0 z-50 px-3 sm:px-6 lg:px-8 py-3">
+      <header className="glass-strong fixed top-0 left-0 right-0 z-50 px-3 sm:px-6 lg:px-8 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white hover:text-[var(--accent-orange)] transition-colors">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -42,7 +42,7 @@ export default function Layout({ children }) {
         </div>
       </header>
 
-      <main className="flex-1 px-3 sm:px-6 lg:px-8 py-4 sm:py-5 max-w-3xl mx-auto w-full">
+      <main className="flex-1 px-3 sm:px-6 lg:px-8 py-4 sm:py-5 pt-16 max-w-3xl mx-auto w-full">
         {children}
       </main>
 
