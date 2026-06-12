@@ -108,8 +108,9 @@ export default function LeagueDraft() {
         setUserTeam(tData.find(t => t.userId === user?.id) || null);
 
         try {
-          const sSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', id), orderBy('seasonNumber', 'desc'), limit(1)));
-          if (!sSnap.empty) setSeason({ id: sSnap.docs[0].id, ...sSnap.docs[0].data() });
+          const sSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', id)));
+          const seasonsList = sSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.seasonNumber || 0) - (a.seasonNumber || 0));
+          if (seasonsList.length > 0) setSeason(seasonsList[0]);
         } catch (e) { console.error('season query:', e); }
 
         const dSnap = await getDocs(query(draftsCol(id), orderBy('createdAt', 'desc'), limit(1)));

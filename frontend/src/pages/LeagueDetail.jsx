@@ -56,9 +56,10 @@ export default function LeagueDetail() {
       setTeams(tData);
 
       try {
-        const seasonSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', id), orderBy('seasonNumber', 'desc'), limit(1)));
-        if (!seasonSnap.empty) {
-          const seasonData = { id: seasonSnap.docs[0].id, ...seasonSnap.docs[0].data() };
+        const seasonSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', id)));
+        const seasonsList = seasonSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.seasonNumber || 0) - (a.seasonNumber || 0));
+        if (seasonsList.length > 0) {
+          const seasonData = seasonsList[0];
           setSeason(seasonData);
 
           try {

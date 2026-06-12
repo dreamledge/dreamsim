@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getDoc, getDocs, query, where, collection, orderBy, limit } from 'firebase/firestore';
+import { getDoc, getDocs, query, where, collection } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { leagueDoc, teamsCol, teamPlayersCol } from '../lib/firestore';
@@ -45,9 +45,10 @@ export default function FreeAgents() {
         setAvailable(pool.filter(p => !takenIds.has(p.playerId)));
 
         try {
-          const sSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', id), orderBy('seasonNumber', 'desc'), limit(1)));
-          if (!sSnap.empty) {
-            const season = { id: sSnap.docs[0].id, ...sSnap.docs[0].data() };
+          const sSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', id)));
+          const seasonsList = sSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.seasonNumber || 0) - (a.seasonNumber || 0));
+          if (seasonsList.length > 0) {
+            const season = seasonsList[0];
             const dSnap = await getDocs(query(collection(db, 'leagues', id, 'drafts'), where('status', '==', 'completed')));
             const hasCompletedDraft = !dSnap.empty;
 

@@ -4,41 +4,16 @@ import { getDocs, collection, query, where, orderBy, limit } from 'firebase/fire
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { teamsCol, leagueNewsCol } from '../lib/firestore';
+import { checkAndGenerateNews } from '../engine/newsEngine';
 
-const STORY_ICONS = {
-  trade: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
-  injury: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
-  freeagency: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
-  rivalry: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 20-6-6-6 6"/><path d="m18 4-6 6-6-6"/></svg>,
-  mvp: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-  championship: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 22V2h4v20"/></svg>,
-  playoff: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
-  general: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>,
+const TYPE_META = {
+  news:       { icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>, label: 'News' },
+  rumor:      { icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>, label: 'Rumor' },
+  satire:     { icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>, label: 'Satire' },
+  podcast:    { icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>, label: 'Podcast' },
+  social:     { icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.6 5.6 4.1 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>, label: 'Social' },
+  locker_room:{ icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, label: 'Locker Room' },
 };
-
-const STORY_LABELS = {
-  trade: 'Trade',
-  injury: 'Injury',
-  freeagency: 'Free Agency',
-  rivalry: 'Rivalry',
-  mvp: 'MVP Race',
-  championship: 'Championship',
-  playoff: 'Playoffs',
-  general: 'League News',
-};
-
-const MOCK_STORIES = [
-  { storyType: 'trade', title: 'Blockbuster Trade: Star Guard on the Move', body: 'A three-team deal sends the all-star guard to Los Angeles in exchange for two first-round picks and a young forward. The trade is expected to reshape the playoff landscape.' },
-  { storyType: 'injury', title: 'Star Player Sidelined with Knee Injury', body: 'The team\'s leading scorer is expected to miss 4-6 weeks after suffering an MCL sprain during last night\'s game. The medical staff is optimistic about a full recovery.' },
-  { storyType: 'championship', title: 'Huskies Clinch Playoff Berth!', body: 'With an impressive 112-98 victory over the Titans, the Huskies have secured their spot in the postseason for the third consecutive year.' },
-  { storyType: 'freeagency', title: 'Free Agent Market Heats Up', body: 'Multiple teams are preparing offers for the league\'s most coveted free agents as the July deadline approaches. Several max contracts are expected.' },
-  { storyType: 'rivalry', title: 'Rivalry Game Ends in Dramatic Fashion', body: 'A buzzer-beater three-pointer seals the victory in the latest chapter of this heated rivalry. The crowd erupted as the shot swished through the net at the final horn.' },
-  { storyType: 'mvp', title: 'MVP Race: Frontrunner Emerges', body: 'With back-to-back 40-point performances and a string of triple-doubles, the leading candidate has separated from the pack in the MVP race.' },
-  { storyType: 'trade', title: 'Trade Deadline: Surprise Deal Shakes Up League', body: 'In a move that caught everyone off guard, a veteran star is headed to a new contender in exchange for a package of young talent and draft capital.' },
-  { storyType: 'injury', title: 'Rookie Sensation Out with Ankle Injury', body: 'The promising rookie will miss at least two weeks after rolling his ankle in practice. The team will rely on bench depth to fill the gap.' },
-  { storyType: 'playoff', title: 'Playoff Picture Takes Shape', body: 'As the regular season winds down, the playoff matchups are becoming clearer. Four teams have already clinched, while six spots remain up for grabs.' },
-  { storyType: 'championship', title: 'Championship Glory: Dynasty in the Making', body: 'After an incredible championship run, questions arise whether this team can sustain their dominance and build a lasting dynasty for years to come.' },
-];
 
 export default function LeagueNews() {
   const { user } = useAuth();
@@ -76,19 +51,7 @@ export default function LeagueNews() {
     if (newsCache[leagueId]) return;
     try {
       const nSnap = await getDocs(query(leagueNewsCol(leagueId), orderBy('createdAt', 'desc'), limit(10)));
-      const real = nSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const mock = MOCK_STORIES.map((m, i) => ({
-        id: `mock-${i}`,
-        ...m,
-        createdAt: new Date(Date.now() - i * 86400000 * 2).toISOString(),
-      }));
-      const merged = [...real];
-      for (const m of mock) {
-        if (!merged.some(item => item.title === m.title)) {
-          merged.push(m);
-        }
-      }
-      setNewsCache(prev => ({ ...prev, [leagueId]: merged.slice(0, 8) }));
+      setNewsCache(prev => ({ ...prev, [leagueId]: nSnap.docs.map(d => ({ id: d.id, ...d.data() })) }));
     } catch (err) {
       console.error('loadLeagueNews error:', err);
       setNewsCache(prev => ({ ...prev, [leagueId]: [] }));
@@ -101,6 +64,7 @@ export default function LeagueNews() {
     } else {
       setExpandedId(leagueId);
       loadLeagueNews(leagueId);
+      checkAndGenerateNews(leagueId);
     }
   };
 
@@ -164,16 +128,16 @@ export default function LeagueNews() {
                             className="flex items-start gap-3 py-2 px-2 rounded-lg hover:bg-[var(--bg-secondary)]/50 transition-colors cursor-default"
                           >
                             <div className="w-8 h-8 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] flex items-center justify-center shrink-0 mt-0.5">
-                              {STORY_ICONS[item.storyType] || STORY_ICONS.general}
+                              {TYPE_META[item.type]?.icon || TYPE_META.news.icon}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-medium text-white leading-snug">{item.title}</span>
                                 <span className="badge bg-[var(--bg-tertiary)] text-[var(--text-tertiary)] text-[10px] px-1.5 py-0.5 shrink-0">
-                                  {STORY_LABELS[item.storyType] || 'General'}
+                                  {TYPE_META[item.type]?.label || 'News'}
                                 </span>
                               </div>
-                              <p className="text-xs text-[var(--text-tertiary)] mt-0.5 line-clamp-1">{item.body}</p>
+                              <p className="text-xs text-[var(--text-tertiary)] mt-0.5 line-clamp-1">{item.subheadline || item.body}</p>
                               <p className="text-[10px] text-[var(--text-tertiary)]/50 mt-0.5">
                                 {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
                               </p>

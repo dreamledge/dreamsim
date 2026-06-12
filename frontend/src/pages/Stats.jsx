@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getDocs, collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { getDocs, collection, query, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { teamsCol, teamPlayersCol } from '../lib/firestore';
@@ -13,6 +13,20 @@ export default function Stats() {
     if (!user) return;
     const load = async () => {
       const teamSnap = await getDocs(query(teamsCol(), where('userId', '==', user.id)));
+      const leagueIds = new Set(teamSnap.docs.map(d => d.data().leagueId));
+
+      let hasGames = false;
+      for (const lid of leagueIds) {
+        const sSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', lid)));
+        for (const sDoc of sSnap.docs) {
+          const gSnap = await getDocs(query(collection(db, 'seasons', sDoc.id, 'games'), where('isCompleted', '==', 1), limit(1)));
+          if (gSnap.docs.length > 0) { hasGames = true; break; }
+        }
+        if (hasGames) break;
+      }
+
+      if (!hasGames) { setLoading(false); return; }
+
       const allPlayers = [];
       for (const tDoc of teamSnap.docs) {
         const pSnap = await getDocs(teamPlayersCol(tDoc.id));

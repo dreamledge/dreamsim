@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, getDocs, collection, query, where, setDoc, updateDoc, orderBy, limit } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { uid, teamsCol, teamDoc, teamPlayersCol, teamPlayerDoc, leagueDoc } from '../lib/firestore';
@@ -123,9 +123,10 @@ export default function TeamDetail() {
         }
 
         try {
-          const gameSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', t.leagueId), orderBy('seasonNumber', 'desc'), limit(1)));
-          if (!gameSnap.empty) {
-            const s = gameSnap.docs[0];
+          const gameSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', t.leagueId)));
+          const seasonsList = gameSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.seasonNumber || 0) - (a.seasonNumber || 0));
+          if (seasonsList.length > 0) {
+            const s = seasonsList[0];
             const gSnap = await getDocs(collection(db, 'seasons', s.id, 'games'));
             const allGames = gSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(g => g.homeTeamId === id || g.awayTeamId === id);
             setGames(allGames);

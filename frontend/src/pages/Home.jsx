@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { db } from '../firebase';
-import { query, where, orderBy, getDocs, collection, doc, getDoc, deleteDoc, limit, writeBatch } from 'firebase/firestore';
+import { query, where, getDocs, collection, doc, getDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
-import { leaguesCol, leagueDoc, leagueNewsCol, leagueMembersCol, teamsCol, teamPlayersCol, championshipsCol, draftsCol, draftPicksCol } from '../lib/firestore';
+import { leaguesCol, leagueDoc, leagueNewsCol, leagueMembersCol, teamsCol, teamPlayersCol, championshipsCol, draftsCol, draftPicksCol, seasonsCol } from '../lib/firestore';
 
 export default function Home() {
   const { user } = useAuth();
   const [userLeagues, setUserLeagues] = useState([]);
-  const [newsMap, setNewsMap] = useState({});
+  const [seasonMap, setSeasonMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [leavingIds, setLeavingIds] = useState(new Set());
   const [deletingIds, setDeletingIds] = useState(new Set());
@@ -32,14 +32,15 @@ export default function Home() {
         }
         setUserLeagues(leagues);
 
-        const nm = {};
-        for (const l of leagues.slice(0, 3)) {
+        const sm = {};
+        for (const l of leagues) {
           try {
-            const newsSnap = await getDocs(query(leagueNewsCol(l.id), orderBy('createdAt', 'desc'), limit(3)));
-            nm[l.id] = newsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const sSnap = await getDocs(query(seasonsCol(), where('leagueId', '==', l.id)));
+            const seasonsList = sSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.seasonNumber || 0) - (a.seasonNumber || 0));
+            if (seasonsList.length > 0) sm[l.id] = seasonsList[0].id;
           } catch {}
         }
-        setNewsMap(nm);
+        setSeasonMap(sm);
       } catch (err) {
         console.error('Home load error:', err);
       } finally {
@@ -150,14 +151,14 @@ export default function Home() {
             <div className="space-y-2">
               {userLeagues.map((league, i) => (
                 <Link key={league.id} to={`/leagues/${league.id}`} className="glass-card p-4 flex items-center justify-between hover:bg-[var(--bg-tertiary)] transition-all duration-200 hover:translate-x-0.5 group" style={{animationDelay: `${i * 0.06}s`}}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-sm font-bold font-display text-white shadow-sm">L</div>
-                    <div>
-                      <h4 className="font-semibold text-sm">{league.name}</h4>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] flex items-center justify-center text-sm font-bold font-display text-white shadow-sm flex-shrink-0">L</div>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-sm truncate">{league.name}</h4>
                       <p className="text-xs text-[var(--text-tertiary)]">Season {league.currentSeason || 1}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {isCommissioner(league) ? (
                       <button
                         onClick={(e) => handleDeleteLeague(e, league)}
@@ -182,22 +183,6 @@ export default function Home() {
             </div>
           </div>
 
-          {Object.entries(newsMap).filter(([,v]) => v.length > 0).map(([leagueId, news], li) => (
-            <div key={leagueId} className="space-y-2">
-              <h3 className="text-xs uppercase tracking-[0.12em] font-semibold text-[var(--text-tertiary)]">Latest News</h3>
-              {news.map((item, i) => (
-                <div key={i} className="glass-card p-3.5 accent-stripe" style={{animationDelay: `${i * 0.06 + 0.1}s`}}>
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg mt-0.5">{item.storyType === 'championship' ? '🏆' : item.storyType === 'trade' ? '🤝' : '📰'}</span>
-                    <div>
-                      <p className="text-sm font-medium">{item.title}</p>
-                      <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{item.body?.slice(0, 80)}...</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
         </>
       )}
     </div>
