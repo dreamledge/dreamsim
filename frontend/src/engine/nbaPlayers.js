@@ -509,6 +509,10 @@ export async function getNbaPlayerPool() {
   return [];
 }
 
+export function getPoolSize() {
+  return (NBA_PLAYER_POOL.players || []).length;
+}
+
 export async function draftNbaPlayers(count = 5) {
   const pool = NBA_PLAYER_POOL.players || [];
   if (pool.length === 0) return [];

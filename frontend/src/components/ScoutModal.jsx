@@ -62,7 +62,7 @@ export default function ScoutModal({ player, onDraft, onClose }) {
 
           <div className="bg-[var(--bg-secondary)] rounded-xl p-4">
             <h3 className="font-display text-xs tracking-wider text-[var(--text-tertiary)] uppercase mb-2">Per-Game Averages</h3>
-            <div className="grid grid-cols-4 gap-2 text-center">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
               {[
                 { label: 'PPG', value: player.statsPpg },
                 { label: 'RPG', value: player.statsRpg },

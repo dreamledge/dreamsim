@@ -26,8 +26,8 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex flex-col min-h-screen pb-20 noise-overlay">
-      <header className="glass-strong sticky top-0 z-50 px-4 py-3">
-        <div className="max-w-lg mx-auto flex items-center justify-between">
+      <header className="glass-strong sticky top-0 z-50 px-3 sm:px-6 lg:px-8 py-3">
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white hover:text-[var(--accent-orange)] transition-colors">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
             <span className="text-sm font-medium">Back</span>
@@ -42,19 +42,19 @@ export default function Layout({ children }) {
         </div>
       </header>
 
-      <main className="flex-1 px-4 py-5 max-w-lg mx-auto w-full">
+      <main className="flex-1 px-3 sm:px-6 lg:px-8 py-4 sm:py-5 max-w-3xl mx-auto w-full">
         {children}
       </main>
 
       <nav className="glass-strong fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border-subtle)]">
-        <div className="max-w-lg mx-auto flex justify-around py-1">
+        <div className="max-w-3xl mx-auto flex justify-around gap-1 sm:gap-4 py-1">
           {navItems.map(item => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-3 py-1.5 text-xs transition-all duration-200 relative ${
+                `flex flex-col items-center gap-0.5 px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs transition-all duration-200 relative ${
                   isActive
                     ? 'text-[var(--accent-orange)] tab-active-indicator'
                     : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
@@ -63,8 +63,8 @@ export default function Layout({ children }) {
             >
               {({ isActive }) => (
                 <>
-                  <span className={isActive ? 'drop-shadow-[0_0_6px_rgba(255,107,53,0.4)]' : ''}>{item.icon}</span>
-                  <span className="font-medium tracking-wide">{item.label}</span>
+                  <span className={`shrink-0 ${isActive ? 'drop-shadow-[0_0_6px_rgba(255,107,53,0.4)]' : ''}`}>{item.icon}</span>
+                  <span className="font-medium tracking-wide truncate max-w-[60px] sm:max-w-none">{item.label}</span>
                 </>
               )}
             </NavLink>

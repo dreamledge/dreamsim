@@ -9,5 +9,10 @@
     "build": "cd frontend && npx vite build",
     "preview": "cd frontend && npx vite preview",
     "deploy": "cd frontend && npx vercel --prod"
+  },
+  "dependencies": {
+    "axios": "^1.17.0",
+    "cheerio": "^1.2.0",
+    "uuid": "^14.0.0"
   }
 }

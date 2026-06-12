@@ -45,27 +45,29 @@ export default function Stats() {
         <>
           <div className="glass-card p-4 animate-fade-up">
             <h3 className="font-display text-lg tracking-wider mb-3">Scoring Leaders</h3>
-            <div className="space-y-1">
-              <div className="grid grid-cols-4 text-xs text-[var(--text-tertiary)] px-2 pb-2 border-b border-[var(--border-subtle)] uppercase tracking-wider font-semibold">
-                <span className="col-span-2">Player</span><span className="text-right">PPG</span><span className="text-right">Team</span>
-              </div>
-              {leaders.slice(0, 15).map((p, i) => (
-                <div key={p.id} className="grid grid-cols-4 items-center px-2 py-1.5 text-sm hover:bg-[var(--bg-secondary)] rounded-lg transition-colors">
-                  <span className="col-span-2 flex items-center gap-2">
-                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                      i < 3 ? 'bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] text-white' : 'text-[var(--text-tertiary)]'
-                    }`}>{i + 1}</span>
-                    <span className="font-medium">{p.firstName} {p.lastName}</span>
-                    <span className="text-xs text-[var(--text-tertiary)]">{p.position}</span>
-                  </span>
-                  <span className="text-right font-display text-lg tracking-wide">{(p.statsPpg || 0).toFixed(1)}</span>
-                  <span className="text-right text-xs text-[var(--text-tertiary)]">{p.teamName}</span>
+            <div className="overflow-x-auto">
+              <div className="min-w-[400px] space-y-1">
+                <div className="grid grid-cols-4 text-xs text-[var(--text-tertiary)] px-2 pb-2 border-b border-[var(--border-subtle)] uppercase tracking-wider font-semibold">
+                  <span className="col-span-2">Player</span><span className="text-right">PPG</span><span className="text-right">Team</span>
                 </div>
-              ))}
+                {leaders.slice(0, 15).map((p, i) => (
+                  <div key={p.id} className="grid grid-cols-4 items-center px-2 py-1.5 text-sm hover:bg-[var(--bg-secondary)] rounded-lg transition-colors">
+                    <span className="col-span-2 flex items-center gap-2">
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
+                        i < 3 ? 'bg-gradient-to-br from-[#ff7b35] to-[#e83a4b] text-white' : 'text-[var(--text-tertiary)]'
+                      }`}>{i + 1}</span>
+                      <span className="font-medium">{p.firstName} {p.lastName}</span>
+                      <span className="text-xs text-[var(--text-tertiary)]">{p.position}</span>
+                    </span>
+                    <span className="text-right font-display text-lg tracking-wide">{(p.statsPpg || 0).toFixed(1)}</span>
+                    <span className="text-right text-xs text-[var(--text-tertiary)]">{p.teamName}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 animate-fade-up">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-up">
             <div className="glass-card p-4">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-6 h-6 rounded-full bg-[var(--accent-teal)]/20 flex items-center justify-center">

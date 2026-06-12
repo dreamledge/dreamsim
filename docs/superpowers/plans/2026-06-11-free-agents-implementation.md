@@ -1,6 +1,83 @@
+# Free Agents System Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Add a Free Agents browsing page, remove auto-assign on team creation, and add commissioner offseason controls.
+
+**Architecture:** Three files modified (CreateTeam, LeagueDetail, App) and one new page (FreeAgents). Free agents data sourced from NBA player pool JSON, filtered against current team rosters in Firestore.
+
+**Tech Stack:** React, Firebase Firestore, Vite, NBA player pool JSON
+
+---
+
+## File Structure
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `frontend/src/pages/CreateTeam.jsx` | Modify | Remove auto-draft on team creation |
+| `frontend/src/pages/LeagueDetail.jsx` | Modify | Add Free Agents button, add offseason controls |
+| `frontend/src/pages/FreeAgents.jsx` | Create | New page: browse available players with search/filter |
+| `frontend/src/App.jsx` | Modify | Add route for FreeAgents |
+
+---
+
+### Task 1: Remove Auto-Draft from CreateTeam
+
+**Files:**
+- Modify: `frontend/src/pages/CreateTeam.jsx`
+
+- [ ] **Step 1: Remove auto-draft logic and clean up unused state** — In `CreateTeam.jsx`:
+  1. Delete the `initializing` state declaration (line 34: `const [initializing, setInitializing] = useState(false);`)
+  2. Delete the `ensureNbaPool()` and `draftNbaPlayers(5)` call and the `for` loop block that saves players (lines 68-77)
+  3. Update the button text (line 135): change `{loading ? 'Loading NBA players...' : 'Create Team & Draft Players'}` to `{loading ? 'Creating...' : 'Create Team'}`
+  4. Update the button disabled attribute (line 134): change `disabled={loading || initializing}` to `disabled={loading}`
+  5. Remove unused import (line 7): change `import { draftNbaPlayers, ensureNbaPool } from '../engine/gameEngine';` to just remove the line entirely
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add frontend/src/pages/CreateTeam.jsx
+git commit -m "fix: remove auto-draft on team creation, team starts empty"
+```
+
+---
+
+### Task 2: Add Free Agents Button to LeagueDetail
+
+**Files:**
+- Modify: `frontend/src/pages/LeagueDetail.jsx`
+
+- [ ] **Step 1: Add Free Agents to the quick actions grid** — Insert a new entry in the actions array (line 360), before Standings:
+
+```jsx
+{ label: 'Free Agents', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>, to: `/leagues/${id}/freeagents` },
+```
+
+Change the grid container (line 358) from `grid-cols-5` to `grid-cols-6`:
+```jsx
+<div className="grid grid-cols-6 gap-2 animate-fade-up">
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add frontend/src/pages/LeagueDetail.jsx
+git commit -m "feat: add Free Agents button to league detail quick actions"
+```
+
+---
+
+### Task 3: Create FreeAgents Page
+
+**Files:**
+- Create: `frontend/src/pages/FreeAgents.jsx`
+
+- [ ] **Step 1: Write the full FreeAgents component**
+
+```jsx
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getDoc, getDocs, query, where, collection, orderBy, limit } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, where, collection, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { leagueDoc, teamsCol, teamPlayersCol } from '../lib/firestore';
@@ -16,6 +93,8 @@ export default function FreeAgents() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [positionFilter, setPositionFilter] = useState('All');
+  const [ovrMin, setOvrMin] = useState(0);
+  const [ovrMax, setOvrMax] = useState(99);
   const [userTeam, setUserTeam] = useState(null);
   const [signingStatus, setSigningStatus] = useState({ enabled: false, message: '' });
 
@@ -64,8 +143,6 @@ export default function FreeAgents() {
             } else {
               setSigningStatus({ enabled: false, message: 'Free agency is currently closed.' });
             }
-          } else {
-            setSigningStatus({ enabled: false, message: 'No season found — free agency opens after the first draft.' });
           }
         } catch (e) {}
       } catch (e) {
@@ -81,7 +158,8 @@ export default function FreeAgents() {
     const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
     const matchName = !search || fullName.includes(search.toLowerCase());
     const matchPos = positionFilter === 'All' || p.primaryPosition === positionFilter;
-    return matchName && matchPos;
+    const matchOvr = (p.overall || 50) >= ovrMin && (p.overall || 50) <= ovrMax;
+    return matchName && matchPos && matchOvr;
   });
 
   if (loading) return (
@@ -133,12 +211,21 @@ export default function FreeAgents() {
             </button>
           ))}
         </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-[var(--text-tertiary)] shrink-0 w-16">OVR: {ovrMin}-{ovrMax}</span>
+          <input type="range" min={0} max={99} value={ovrMin}
+            onChange={e => setOvrMin(Math.min(Number(e.target.value), ovrMax - 5))}
+            className="flex-1 accent-[var(--accent-orange)] h-1.5" />
+          <input type="range" min={0} max={99} value={ovrMax}
+            onChange={e => setOvrMax(Math.max(Number(e.target.value), ovrMin + 5))}
+            className="flex-1 accent-[var(--accent-orange)] h-1.5" />
+        </div>
       </div>
 
       <div className="space-y-1 animate-slide-up">
         <p className="text-xs text-[var(--text-tertiary)] font-medium mb-2">{filtered.length} players match filters</p>
         <div className="space-y-1 max-h-[600px] overflow-y-auto">
-          {[...filtered].sort((a, b) => (b.overall || 0) - (a.overall || 0)).map((p, i) => (
+          {filtered.sort((a, b) => (b.overall || 0) - (a.overall || 0)).map((p, i) => (
             <div key={p.playerId} className="glass-card p-3 flex items-center gap-3 transition-all duration-200 hover:bg-[var(--bg-tertiary)]" style={{animationDelay: `${i * 0.02}s`}}>
               <div className="rating-circle rating-circle-sm shrink-0" style={{'--pct': `${p.overall || 50}%`}}>
                 <span className="text-white text-xs">{p.overall || '-'}</span>
@@ -174,3 +261,125 @@ export default function FreeAgents() {
     </div>
   );
 }
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add frontend/src/pages/FreeAgents.jsx
+git commit -m "feat: add Free Agents page with search/filter"
+```
+
+---
+
+### Task 4: Add Route to App.jsx
+
+**Files:**
+- Modify: `frontend/src/App.jsx`
+
+- [ ] **Step 1: Import and add route** — Add import at line 21:
+```jsx
+import FreeAgents from './pages/FreeAgents';
+```
+
+Add route after the League Detail route (after line 39):
+```jsx
+<Route path="/leagues/:id/freeagents" element={<ProtectedRoute><Layout><FreeAgents /></Layout></ProtectedRoute>} />
+```
+
+Full context (lines 39-40 should become):
+```jsx
+        <Route path="/leagues/:id" element={<ProtectedRoute><Layout><LeagueDetail /></Layout></ProtectedRoute>} />
+        <Route path="/leagues/:id/freeagents" element={<ProtectedRoute><Layout><FreeAgents /></Layout></ProtectedRoute>} />
+```
+
+- [ ] **Step 2: Commit**
+
+```bash
+git add frontend/src/App.jsx
+git commit -m "feat: add free agents route"
+```
+
+---
+
+### Task 5: Add Commissioner Offseason Controls to LeagueDetail
+
+**Files:**
+- Modify: `frontend/src/pages/LeagueDetail.jsx`
+
+- [ ] **Step 1: Add offseason buttons** — After the Sim Controls section (after line 383), add the offseason controls that only the commissioner sees:
+
+```jsx
+      {/* ── Offseason Controls ── */}
+      {isCommissioner && season?.status === 'completed' && !league?.offseason && (
+        <button onClick={handleStartOffseason} className="btn-glow w-full py-2.5 text-sm">
+          Start Offseason
+        </button>
+      )}
+      {isCommissioner && league?.offseason === true && (
+        <button onClick={handleEndOffseason} className="btn-glow w-full py-2.5 text-sm">
+          End Offseason
+        </button>
+      )}
+```
+
+- [ ] **Step 2: Add handler functions** — After the `simAll` function (after line 183), add two new handlers:
+
+```jsx
+  const handleStartOffseason = async () => {
+    if (!league) return;
+    try {
+      await updateDoc(leagueDoc(id), { offseason: true });
+      setLeague(prev => ({ ...prev, offseason: true }));
+    } catch (e) {
+      console.error('Start offseason error:', e);
+    }
+  };
+
+  const handleEndOffseason = async () => {
+    if (!league) return;
+    try {
+      const newSeasonId = uid();
+      const nextNumber = (league.currentSeason || 1) + 1;
+      await setDoc(doc(db, 'seasons', newSeasonId), {
+        leagueId: id, seasonNumber: nextNumber,
+        status: 'pregame', currentWeek: 0, totalWeeks: 24,
+        createdAt: new Date().toISOString(),
+      });
+      await updateDoc(leagueDoc(id), { currentSeason: nextNumber, offseason: false });
+      setLeague(prev => ({ ...prev, currentSeason: nextNumber, offseason: false }));
+      load();
+    } catch (e) {
+      console.error('End offseason error:', e);
+    }
+  };
+```
+
+- [ ] **Step 3: Update imports** — Ensure `setDoc` and `collection` are imported at line 3. Currently line 3 reads:
+```jsx
+import { doc, getDoc, getDocs, collection, query, where, orderBy, limit, updateDoc, setDoc } from 'firebase/firestore';
+```
+This already includes `setDoc`, `updateDoc`, `doc`, `collection`. No import changes needed.
+
+- [ ] **Step 4: Ensure `uid` is imported** — Check line 6:
+```jsx
+import { uid, leagueDoc, teamsCol, teamPlayersCol, seasonDoc, seasonGamesCol, leagueNewsCol, championshipsCol, championshipDoc, leagueNewsDoc } from '../lib/firestore';
+```
+This already includes `uid`. Good.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add frontend/src/pages/LeagueDetail.jsx
+git commit -m "feat: add commissioner offseason start/end controls"
+```
+
+---
+
+## Self-Review Checklist
+
+- [ ] **Spec coverage:** Task 1 covers "Remove auto-assign" — the main reason players appear on teams. Task 2 covers "Free Agents button under My Team". Task 3 covers "scroll through available players, search by position/overalls/names". Task 5 covers "commissioner controls start/end offseason". All spec requirements covered.
+
+- [ ] **Placeholder scan:** No TBDs, TODOs, or vague steps. Every code block contains complete, working code.
+
+- [ ] **Type consistency:** `playerId` used consistently as pool identifier. `league.offseason` boolean used in both FreeAgents.jsx and LeagueDetail.jsx. `getDocs`, `query`, `where` usage matches existing codebase patterns.

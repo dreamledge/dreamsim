@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc, getDocs, setDoc, updateDoc, onSnapshot, query, where, orderBy, limit, deleteDoc, collection } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, updateDoc, onSnapshot, query, where, orderBy, limit, deleteDoc, collection, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { uid, leagueDoc, teamsCol, teamPlayersCol, teamPlayerDoc, draftsCol, draftDoc, draftPicksCol, draftPickDoc, nbaPoolDoc } from '../lib/firestore';
-import { draftNbaPlayers, ensureNbaPool } from '../engine/gameEngine';
+import { draftNbaPlayers, ensureNbaPool, getPoolSize } from '../engine/gameEngine';
 import DraftDatePicker from '../components/DraftDatePicker';
 import ScoutModal from '../components/ScoutModal';
 
@@ -91,6 +91,7 @@ export default function LeagueDraft() {
   const [userTeam, setUserTeam] = useState(null);
   const [countdown, setCountdown] = useState('');
   const [scoutPlayer, setScoutPlayer] = useState(null);
+  const [isStarting, setIsStarting] = useState(false);
   const timerRef = useRef(null);
   const countdownRef = useRef(null);
 
@@ -298,66 +299,105 @@ export default function LeagueDraft() {
     setDraft({ id: dId, status: 'scheduled', currentPick: 0, totalPicks, totalRounds });
 
     try {
-      const players = await generateAvailablePlayers(totalPicks);
+      const count = totalRounds > 3 ? getPoolSize() : totalPicks;
+      const players = await generateAvailablePlayers(count);
+      let batch = writeBatch(db);
+      let opCount = 0;
       for (const p of players) {
-        await setDoc(doc(collection(db, 'leagues', id, 'drafts', dId, 'players'), p.id || p.firestoreId || uid()), p);
+        const ref = doc(collection(db, 'leagues', id, 'drafts', dId, 'players'), p.id || p.firestoreId || uid());
+        batch.set(ref, p);
+        opCount++;
+        if (opCount >= 500) {
+          await batch.commit();
+          batch = writeBatch(db);
+          opCount = 0;
+        }
       }
+      if (opCount > 0) await batch.commit();
     } catch (e) { console.error('generate pool:', e); }
 
     loadPlayers(dId);
   };
 
   const handleStartDraft = async () => {
-    if (!draft) return;
-    const totalRounds = draft.totalRounds || 3;
-    const orderSeed = totalRounds > 3 ? shuffle(teams) : generateLotteryOrder(teams);
-    const totalPicks = teams.length * totalRounds;
-    const dId = draft.id;
+    if (!draft || isStarting) return;
+    setIsStarting(true);
+    try {
+      const totalRounds = draft.totalRounds || 3;
+      const orderSeed = totalRounds > 3 ? shuffle(teams) : generateLotteryOrder(teams);
+      const totalPicks = teams.length * totalRounds;
+      const dId = draft.id;
 
-    const batch = [];
-    let order = 0;
-    for (let r = 1; r <= totalRounds; r++) {
-      const roundTeams = r % 2 === 1 ? orderSeed : [...orderSeed].reverse();
-      for (const t of roundTeams) {
-        order++;
-        batch.push({
-          order,
-          round: r,
-          teamId: t.id,
-          teamName: t.name,
-          playerId: null,
-          playerName: null,
-          status: 'waiting',
-          pickedAt: null,
-        });
+      const batch = [];
+      let order = 0;
+      for (let r = 1; r <= totalRounds; r++) {
+        const roundTeams = r % 2 === 1 ? orderSeed : [...orderSeed].reverse();
+        for (const t of roundTeams) {
+          order++;
+          batch.push({
+            order,
+            round: r,
+            teamId: t.id,
+            teamName: t.name,
+            playerId: null,
+            playerName: null,
+            status: 'waiting',
+            pickedAt: null,
+          });
+        }
       }
+
+      const localPicks = [];
+      let pickBatch = writeBatch(db);
+      let pickCount = 0;
+      for (const p of batch) {
+        const pId = uid();
+        pickBatch.set(draftPickDoc(id, dId, pId), p);
+        localPicks.push({ id: pId, ...p });
+        pickCount++;
+        if (pickCount >= 500) {
+          await pickBatch.commit();
+          pickBatch = writeBatch(db);
+          pickCount = 0;
+        }
+      }
+      if (pickCount > 0) await pickBatch.commit();
+      setPicks(localPicks);
+
+      // Players already saved in handleSchedule — only generate if pool is empty
+      const pSnap = await getDocs(collection(db, 'leagues', id, 'drafts', dId, 'players'));
+      if (pSnap.empty) {
+        const count = totalRounds > 3 ? getPoolSize() : totalPicks;
+        const players = await generateAvailablePlayers(count);
+        let poolBatch = writeBatch(db);
+        let poolCount = 0;
+        for (const p of players) {
+          const ref = doc(collection(db, 'leagues', id, 'drafts', dId, 'players'), p.id || p.firestoreId || uid());
+          poolBatch.set(ref, p);
+          poolCount++;
+          if (poolCount >= 500) {
+            await poolBatch.commit();
+            poolBatch = writeBatch(db);
+            poolCount = 0;
+          }
+        }
+        if (poolCount > 0) await poolBatch.commit();
+      }
+
+      await updateDoc(draftDoc(id, dId), {
+        status: 'joining',
+        currentPick: 1,
+        totalPicks,
+        pickStartedAt: new Date().toISOString(),
+        startedAt: new Date().toISOString(),
+        joinDeadline: new Date(Date.now() + 60000).toISOString(),
+        joinedUsers: [],
+      });
+
+      await subscribeDraft();
+    } finally {
+      setIsStarting(false);
     }
-
-    const localPicks = [];
-    for (const p of batch) {
-      const pId = uid();
-      await setDoc(draftPickDoc(id, dId, pId), p);
-      localPicks.push({ id: pId, ...p });
-    }
-
-    setPicks(localPicks);
-
-    const players = await generateAvailablePlayers(totalPicks);
-    for (const p of players) {
-      await setDoc(doc(collection(db, 'leagues', id, 'drafts', dId, 'players'), p.id), p);
-    }
-
-    await updateDoc(draftDoc(id, dId), {
-      status: 'joining',
-      currentPick: 1,
-      totalPicks,
-      pickStartedAt: new Date().toISOString(),
-      startedAt: new Date().toISOString(),
-      joinDeadline: new Date(Date.now() + 60000).toISOString(),
-      joinedUsers: [],
-    });
-
-    await subscribeDraft();
   };
 
   const handleJoinDraft = async () => {
@@ -577,7 +617,9 @@ export default function LeagueDraft() {
           <p>• {teams.length} teams participating</p>
         </div>
         {isCommissioner && (
-          <button onClick={handleStartDraft} className="btn-glow px-8 py-2.5 text-sm">Start Draft Now</button>
+          <button onClick={handleStartDraft} disabled={isStarting} className={`px-8 py-2.5 text-sm ${isStarting ? 'btn-disabled opacity-50 cursor-not-allowed' : 'btn-glow'}`}>
+            {isStarting ? 'Starting Draft...' : 'Start Draft Now'}
+          </button>
         )}
       </div>
 
@@ -667,6 +709,13 @@ export default function LeagueDraft() {
       <div className="glass-card p-5 text-center animate-scale-in relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[var(--accent-orange)]/10 to-transparent rounded-full blur-3xl" />
         <div className="relative z-10">
+          <div className="flex items-center justify-center gap-1 mb-3">
+            <div className="min-w-[72px] px-3 py-1.5 rounded-xl border-2 font-display text-xl font-bold tracking-widest" style={{color: timeLeft <= 10 ? '#ef4444' : 'var(--accent-orange)', borderColor: timeLeft <= 10 ? '#ef4444' : 'var(--accent-orange)'}}>
+              {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+            </div>
+            <span className="text-xs text-[var(--text-tertiary)]">remaining</span>
+          </div>
+
           {currentPick ? (
             <>
               <p className="text-xs text-[var(--text-tertiary)] uppercase tracking-wider mb-1">Round {currentPick.round} &middot; Pick {currentPick.order} of {computedTotalPicks}</p>
@@ -675,16 +724,9 @@ export default function LeagueDraft() {
               </div>
               <h3 className="font-display text-xl tracking-wider">{currentPick.teamName}</h3>
               {currentPick.status === 'waiting' ? (
-                <>
-                  <p className="text-sm text-[var(--text-secondary)] mt-1">
-                    {isMyTurn ? 'Your turn to pick!' : `On the clock`}
-                  </p>
-                  <div className="flex items-center justify-center gap-1 mt-3">
-                    <div className="min-w-[60px] px-3 py-1.5 rounded-xl border-2 border-[var(--accent-orange)] flex items-center justify-center font-display text-lg font-bold tracking-widest" style={{color: timeLeft <= 10 ? '#ef4444' : 'var(--accent-orange)', borderColor: timeLeft <= 10 ? '#ef4444' : 'var(--accent-orange)'}}>
-                      {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
-                    </div>
-                  </div>
-                </>
+                <p className="text-sm text-[var(--text-secondary)] mt-1">
+                  {isMyTurn ? 'Your turn to pick!' : `On the clock`}
+                </p>
               ) : currentPick.status === 'auto' ? (
                 <p className="text-sm text-[var(--accent-gold)] mt-2 flex items-center justify-center gap-1.5">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 10 10"/><polyline points="22 2 22 10 14 10"/></svg>

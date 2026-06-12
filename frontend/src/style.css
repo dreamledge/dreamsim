@@ -506,3 +506,19 @@ body {
   color: #818cf8;
   border: 1px solid rgba(99, 102, 241, 0.2);
 }
+
+/* ─── Responsive: Extra small devices (320px-360px) ─── */
+@media (max-width: 360px) {
+  .font-display.text-3xl { font-size: 1.5rem; }
+  .font-display.text-2xl { font-size: 1.25rem; }
+  .btn-glow, .btn-gold, .btn-ghost { font-size: 0.75rem; padding: 0.5rem 0.75rem; }
+}
+
+/* ─── Responsive: Tablet and above ─── */
+@media (min-width: 768px) {
+  :root {
+    --radius-md: 12px;
+    --radius-lg: 20px;
+  }
+  .glass-card { padding: 1.5rem; }
+}
