@@ -38,28 +38,69 @@ function isEligible(player, slot) {
   return eligible.includes(slot);
 }
 
+const LOTTERY_ODDS = [
+  { seed: 1, combinations: 140 },
+  { seed: 2, combinations: 140 },
+  { seed: 3, combinations: 140 },
+  { seed: 4, combinations: 125 },
+  { seed: 5, combinations: 105 },
+  { seed: 6, combinations: 90 },
+  { seed: 7, combinations: 75 },
+  { seed: 8, combinations: 60 },
+  { seed: 9, combinations: 45 },
+  { seed: 10, combinations: 30 },
+  { seed: 11, combinations: 20 },
+  { seed: 12, combinations: 15 },
+  { seed: 13, combinations: 10 },
+  { seed: 14, combinations: 5 },
+];
+
 function generateLotteryOrder(teamList) {
+  if (teamList.length === 0) return [];
+
   const allZeroWins = teamList.every(t => !t.wins);
   if (allZeroWins) return shuffle(teamList);
 
   const sorted = [...teamList].sort((a, b) => (a.wins || 0) - (b.wins || 0));
-  const pool = [];
-  sorted.forEach((team, i) => {
-    for (let w = 0; w < (sorted.length - i) * 10; w++) pool.push(team);
-  });
-  if (pool.length === 0) return shuffle(teamList);
+
+  if (sorted.length <= 4) {
+    return shuffle(sorted);
+  }
+
+  const lotteryTeams = sorted.slice(0, Math.min(14, sorted.length));
+  const nonLotteryTeams = sorted.slice(Math.min(14, sorted.length));
+
+  const oddsToUse = LOTTERY_ODDS.slice(0, lotteryTeams.length);
+
+  let combinationPool = [];
+  for (const { seed, combinations } of oddsToUse) {
+    const teamIndex = seed - 1;
+    if (teamIndex < lotteryTeams.length) {
+      for (let i = 0; i < combinations; i++) {
+        combinationPool.push(lotteryTeams[teamIndex]);
+      }
+    }
+  }
 
   const drawn = [];
-  const remaining = [...sorted];
-  for (let pick = 0; pick < 3 && remaining.length > 0; pick++) {
-    const pickPool = pool.filter(t => remaining.some(rt => rt.id === t.id));
-    if (pickPool.length === 0) break;
-    const winner = pickPool[Math.floor(Math.random() * pickPool.length)];
+  const remainingCombinations = [...combinationPool];
+
+  for (let pick = 0; pick < 4 && remainingCombinations.length > 0; pick++) {
+    const winnerIndex = Math.floor(Math.random() * remainingCombinations.length);
+    const winner = remainingCombinations[winnerIndex];
     drawn.push(winner);
-    const idx = remaining.findIndex(t => t.id === winner.id);
-    if (idx !== -1) remaining.splice(idx, 1);
+
+    remainingCombinations.splice(
+      remainingCombinations.findIndex(t => t.id === winner.id),
+      1
+    );
+
+    lotteryTeams.splice(lotteryTeams.findIndex(t => t.id === winner.id), 1);
   }
-  return [...drawn, ...remaining];
+
+  const remainingLottery = lotteryTeams;
+
+  return [...drawn, ...remainingLottery, ...nonLotteryTeams];
 }
 
 function findWeakestPosition(players, available) {
@@ -184,25 +225,33 @@ export default function LeagueDraft() {
     const currentPick = picks.find(p => p.order === draft.currentPick);
     if (!currentPick || currentPick.status !== 'waiting') return;
 
-    const team = teams.find(t => t.id === currentPick.teamId);
-    const isAi = team && (team.isAi === 1 || team.userId === 'ai');
-    const userHasJoined = team && draft?.joinedUsers?.includes(team.userId);
-    if (isAi || (team && team.userId !== 'ai' && !userHasJoined)) {
-      setTimeout(() => handleAutoPick(currentPick), 0);
-      return;
-    }
+    let cancelled = false;
+    const run = async () => {
+      const teamSnap = await getDocs(query(teamsCol(), where('leagueId', '==', id)));
+      const allTeams = teamSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (cancelled) return;
 
-    const started = draft.pickStartedAt ? new Date(draft.pickStartedAt).getTime() : Date.now();
-    const updateTimer = () => {
-      const elapsed = Math.floor((Date.now() - started) / 1000);
-      const remaining = Math.max(0, 90 - elapsed);
-      setTimeLeft(remaining);
-      if (remaining <= 0) handleAutoPick(currentPick);
+      const team = allTeams.find(t => t.id === currentPick.teamId);
+      const isAi = team && (team.isAi === 1 || team.userId === 'ai');
+      const userHasJoined = team && draft?.joinedUsers?.includes(team.userId);
+      if (isAi || (team && team.userId !== 'ai' && !userHasJoined)) {
+        handleAutoPick();
+        return;
+      }
+
+      const started = draft.pickStartedAt ? new Date(draft.pickStartedAt).getTime() : Date.now();
+      const updateTimer = () => {
+        const elapsed = Math.floor((Date.now() - started) / 1000);
+        const remaining = Math.max(0, 90 - elapsed);
+        setTimeLeft(remaining);
+        if (remaining <= 0) handleAutoPick();
+      };
+      updateTimer();
+      timerRef.current = setInterval(updateTimer, 1000);
     };
-    updateTimer();
-    timerRef.current = setInterval(updateTimer, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [draft?.currentPick, draft?.pickStartedAt, picks.filter(p => p.status === 'waiting').length, draft?.status, teams, draft?.joinedUsers]);
+    run();
+    return () => { cancelled = true; if (timerRef.current) clearInterval(timerRef.current); };
+  }, [draft?.currentPick, draft?.pickStartedAt, picks.filter(p => p.status === 'waiting').length, draft?.status, draft?.joinedUsers]);
 
   useEffect(() => {
     if (!draft || draft.status !== 'scheduled' || !draft.scheduledTime) {
@@ -448,22 +497,39 @@ export default function LeagueDraft() {
     }
   };
 
-  const handleAutoPick = async (pick) => {
-    if (!draft || !pick) return;
-    if (pick.status !== 'waiting') return;
+  const handleAutoPick = async () => {
+    if (!draft) return;
 
-    const team = teams.find(t => t.id === pick.teamId);
+    // Step 1: Read the CURRENT draft state directly from Firestore (no stale data)
+    const draftSnap = await getDoc(draftDoc(id, draft.id));
+    if (!draftSnap.exists()) return;
+    const freshDraft = draftSnap.data();
+
+    // Step 2: Read the current pick directly from Firestore
+    const picksSnap = await getDocs(query(draftPicksCol(id, draft.id), orderBy('order')));
+    const currentPick = picksSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .find(p => p.order === freshDraft.currentPick);
+
+    // Step 3: If pick is already completed or missing, bail out silently
+    if (!currentPick || currentPick.status !== 'waiting') return;
+
+    // Step 4: Find the team for this pick from Firestore (use local teams as fallback)
+    const team = teams.find(t => t.id === currentPick.teamId);
     if (!team) return;
 
+    // Step 5: Get the team's existing roster for position analysis
     let roster = team.players || [];
     if (!roster.length) {
       const pSnap = await getDocs(teamPlayersCol(team.id));
       roster = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     }
 
+    // Step 6: Get available players from Firestore
     const availSnap = await getDocs(collection(db, 'leagues', id, 'drafts', draft.id, 'players'));
     const avail = availSnap.docs.map(d => ({ ...d.data(), firestoreId: d.id }));
 
+    // Step 7: If no players remain, complete the draft
     if (avail.length === 0) {
       await updateDoc(draftDoc(id, draft.id), {
         status: 'completed',
@@ -473,10 +539,12 @@ export default function LeagueDraft() {
       return;
     }
 
+    // Step 8: Pick the best player for the weakest position
     const best = findWeakestPosition(roster, avail);
     if (!best) return;
 
-    const pickId = pick.id;
+    // Step 9: Update the draft pick document
+    const pickId = currentPick.id;
     await updateDoc(draftPickDoc(id, draft.id, pickId), {
       playerId: best.id,
       playerName: `${best.firstName} ${best.lastName}`,
@@ -484,14 +552,16 @@ export default function LeagueDraft() {
       pickedAt: new Date().toISOString(),
     });
 
+    // Step 10: Remove the drafted player from the pool
     try {
       await deleteDoc(doc(db, 'leagues', id, 'drafts', draft.id, 'players', best.firestoreId || best.id));
     } catch (e) {}
 
-    const draftSnap = await getDoc(draftDoc(id, draft.id));
-    const freshDraft = draftSnap.data();
-    const realTotalPicks = teams.length * (freshDraft?.totalRounds || 3);
-    const nextPick = (freshDraft?.currentPick || draft.currentPick) + 1;
+    // Step 11: Re-read draft state to calculate the real total picks and advance
+    const draftSnap2 = await getDoc(draftDoc(id, draft.id));
+    const freshDraft2 = draftSnap2.data();
+    const realTotalPicks = teams.length * (freshDraft2?.totalRounds || 3);
+    const nextPick = (freshDraft2?.currentPick || draft.currentPick) + 1;
     if (nextPick > realTotalPicks) {
       await updateDoc(draftDoc(id, draft.id), {
         status: 'completed',
