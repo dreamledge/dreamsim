@@ -130,7 +130,7 @@ export default function LeagueDraft() {
   const [picks, setPicks] = useState([]);
   const [availablePlayers, setAvailablePlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [timeLeft, setTimeLeft] = useState(90);
+  const [timeLeft, setTimeLeft] = useState(120);
   const [userTeam, setUserTeam] = useState(null);
   const [countdown, setCountdown] = useState('');
   const [scoutPlayer, setScoutPlayer] = useState(null);
@@ -223,7 +223,7 @@ export default function LeagueDraft() {
   }, [draft?.id, draft?.status]);
 
   useEffect(() => {
-    if (!draft || draft.status !== 'live') { setTimeLeft(90); return; }
+    if (!draft || draft.status !== 'live') { setTimeLeft(120); return; }
     const currentPick = picks.find(p => p.order === draft.currentPick);
     if (!currentPick || currentPick.status !== 'waiting') return;
 
@@ -244,7 +244,7 @@ export default function LeagueDraft() {
       const started = draft.pickStartedAt ? new Date(draft.pickStartedAt).getTime() : Date.now();
       const updateTimer = () => {
         const elapsed = Math.floor((Date.now() - started) / 1000);
-        const remaining = Math.max(0, 90 - elapsed);
+        const remaining = Math.max(0, 120 - elapsed);
         setTimeLeft(remaining);
         if (remaining <= 0) handleAutoPick();
       };
@@ -342,7 +342,7 @@ export default function LeagueDraft() {
       scheduledTime: scheduledDate.toISOString(),
       currentPick: 0,
       totalPicks,
-      pickTimeLimit: 90,
+      pickTimeLimit: 120,
       pickStartedAt: null,
       totalRounds,
       createdAt: new Date().toISOString(),
@@ -664,7 +664,7 @@ export default function LeagueDraft() {
             <h3 className="font-display text-sm tracking-wider">Draft Settings</h3>
             <div className="text-xs text-[var(--text-secondary)] space-y-1">
               <p>• {draft?.totalRounds > 3 ? '15 rounds (expansion)' : `${draft?.totalRounds || 2} rounds`}, snake order</p>
-              <p>• 90 seconds per pick</p>
+              <p>• 120 seconds per pick</p>
               <p>• CPU auto-picks for absent teams</p>
               <p>• {teams.length} teams participating</p>
             </div>
@@ -690,7 +690,7 @@ export default function LeagueDraft() {
         <p className="text-xs text-[var(--text-tertiary)]">Commissioner will start the draft when ready</p>
         <div className="bg-[var(--bg-secondary)] rounded-xl p-3 text-xs text-[var(--text-secondary)] space-y-1">
           <p>• {draft?.totalRounds > 3 ? '15 rounds (expansion)' : `${draft?.totalRounds || 2} rounds`}, snake order</p>
-          <p>• 90 seconds per pick</p>
+          <p>• 120 seconds per pick</p>
           <p>• CPU auto-picks for absent teams</p>
           <p>• {undraftedPlayers.length} players in the pool</p>
           <p>• {teams.length} teams participating</p>
