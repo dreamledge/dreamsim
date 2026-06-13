@@ -26,20 +26,22 @@ export default function Home() {
         commishSnap.docs.forEach(d => leagueIds.add(d.id));
 
         const leagues = [];
-        for (const lid of leagueIds) {
-          const snap = await getDoc(leagueDoc(lid));
-          if (snap.exists()) leagues.push({ id: snap.id, ...snap.data() });
+        const leagueSnaps = await Promise.all(
+          [...leagueIds].map(lid => getDoc(leagueDoc(lid)).catch(() => null))
+        );
+        for (const snap of leagueSnaps) {
+          if (snap && snap.exists()) leagues.push({ id: snap.id, ...snap.data() });
         }
         setUserLeagues(leagues);
 
         const sm = {};
-        for (const l of leagues) {
-          try {
-            const sSnap = await getDocs(query(seasonsCol(), where('leagueId', '==', l.id)));
-            const seasonsList = sSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.seasonNumber || 0) - (a.seasonNumber || 0));
-            if (seasonsList.length > 0) sm[l.id] = seasonsList[0].id;
-          } catch {}
-        }
+        const seasonSnaps = await Promise.all(
+          leagues.map(l => getDocs(query(seasonsCol(), where('leagueId', '==', l.id))).catch(() => ({ docs: [] })))
+        );
+        leagues.forEach((l, i) => {
+          const seasonsList = seasonSnaps[i].docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.seasonNumber || 0) - (a.seasonNumber || 0));
+          if (seasonsList.length > 0) sm[l.id] = seasonsList[0].id;
+        });
         setSeasonMap(sm);
       } catch (err) {
         console.error('Home load error:', err);

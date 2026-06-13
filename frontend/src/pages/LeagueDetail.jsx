@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { doc, getDoc, getDocs, collection, query, where, orderBy, limit, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, orderBy, limit, updateDoc, setDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { uid, leagueDoc, teamsCol, teamPlayersCol, seasonDoc, seasonGamesCol, leagueNewsCol, championshipsCol, championshipDoc, leagueNewsDoc } from '../lib/firestore';
@@ -40,57 +40,51 @@ export default function LeagueDetail() {
   const load = async () => {
     setLoading(true);
     try {
-      const leagueSnap = await getDoc(leagueDoc(id));
+      const [leagueSnap, teamSnap, seasonSnap, champSnap, newsSnap] = await Promise.all([
+        getDoc(leagueDoc(id)),
+        getDocs(query(teamsCol(), where('leagueId', '==', id))),
+        getDocs(query(collection(db, 'seasons'), where('leagueId', '==', id))),
+        getDocs(query(championshipsCol(id), orderBy('seasonNumber', 'desc'), limit(5))),
+        getDocs(query(leagueNewsCol(id), orderBy('createdAt', 'desc'), limit(10))),
+      ]);
+
       if (!leagueSnap.exists()) { setLoading(false); navigate('/leagues'); return; }
       const lData = { id: leagueSnap.id, ...leagueSnap.data() };
       setLeague(lData);
+      setChampionships(champSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setNews(newsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-      const teamSnap = await getDocs(query(teamsCol(), where('leagueId', '==', id)));
-      const tData = [];
-      for (const tDoc of teamSnap.docs) {
-        const t = { id: tDoc.id, ...tDoc.data() };
-        const pSnap = await getDocs(query(teamPlayersCol(tDoc.id), where('seasonId', '==', lData.currentSeason || 1)));
-        t.players = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        tData.push(t);
-      }
+      const currentSeasonNum = lData.currentSeason || 1;
+      const playerSnapshots = await Promise.all(
+        teamSnap.docs.map(tDoc => getDocs(query(teamPlayersCol(tDoc.id), where('seasonId', '==', currentSeasonNum))))
+      );
+      const tData = teamSnap.docs.map((tDoc, i) => ({
+        id: tDoc.id, ...tDoc.data(),
+        players: playerSnapshots[i].docs.map(d => ({ id: d.id, ...d.data() })),
+      }));
       setTeams(tData);
 
-      try {
-        const seasonSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', id)));
-        const seasonsList = seasonSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.seasonNumber || 0) - (a.seasonNumber || 0));
-        if (seasonsList.length > 0) {
-          const seasonData = seasonsList[0];
-          setSeason(seasonData);
+      const seasonsList = seasonSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.seasonNumber || 0) - (a.seasonNumber || 0));
+      if (seasonsList.length > 0) {
+        const seasonData = seasonsList[0];
+        setSeason(seasonData);
 
-          try {
-            const gamesSnap = await getDocs(query(seasonGamesCol(seasonData.id), orderBy('playedAt', 'desc'), limit(5)));
-            setRecentGames(gamesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-          } catch (e) { console.error('games query:', e); }
+        const [gamesSnap, userTeamSnap] = await Promise.all([
+          getDocs(query(seasonGamesCol(seasonData.id), orderBy('playedAt', 'desc'), limit(5))),
+          getDocs(query(teamsCol(), where('leagueId', '==', id), where('userId', '==', user?.id))),
+        ]);
+        setRecentGames(gamesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
-          try {
-            const userTeamSnap = await getDocs(query(teamsCol(), where('leagueId', '==', id), where('userId', '==', user?.id)));
-            if (!userTeamSnap.empty) {
-              const utId = userTeamSnap.docs[0].id;
-              const allGamesSnap = await getDocs(seasonGamesCol(seasonData.id));
-              const teamGames = allGamesSnap.docs
-                .map(d => ({ id: d.id, ...d.data() }))
-                .filter(g => g.isCompleted !== 1 && (g.homeTeamId === utId || g.awayTeamId === utId))
-                .sort((a, b) => (a.week || 0) - (b.week || 0));
-              if (teamGames.length > 0) setNextGame(teamGames[0]);
-            }
-          } catch (e) { console.error('nextGame query:', e); }
+        if (!userTeamSnap.empty) {
+          const utId = userTeamSnap.docs[0].id;
+          const allGamesSnap = await getDocs(seasonGamesCol(seasonData.id));
+          const teamGames = allGamesSnap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(g => g.isCompleted !== 1 && (g.homeTeamId === utId || g.awayTeamId === utId))
+            .sort((a, b) => (a.week || 0) - (b.week || 0));
+          if (teamGames.length > 0) setNextGame(teamGames[0]);
         }
-      } catch (e) { console.error('season query:', e); }
-
-      try {
-        const champSnap = await getDocs(query(championshipsCol(id), orderBy('seasonNumber', 'desc'), limit(5)));
-        setChampionships(champSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (e) { console.error('champs query:', e); }
-
-      try {
-        const newsSnap = await getDocs(query(leagueNewsCol(id), orderBy('createdAt', 'desc'), limit(10)));
-        setNews(newsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (e) { console.error('news query:', e); }
+      }
     } catch (err) {
       console.error('LeagueDetail load error:', err);
     } finally {
@@ -113,6 +107,13 @@ export default function LeagueDetail() {
       const pairs = generateSchedule(teamIds);
       const games = [];
 
+      let batch = writeBatch(db);
+      let opCount = 0;
+
+      const commitBatch = async () => {
+        if (opCount > 0) { await batch.commit(); batch = writeBatch(db); opCount = 0; }
+      };
+
       for (const pair of pairs) {
         const gameId = uid();
         const homeTeam = teams.find(t => t.id === pair.home);
@@ -129,33 +130,44 @@ export default function LeagueDetail() {
           isPlayoff: isPlayoffs ? 1 : 0, isCompleted: 1,
           playedAt: new Date().toISOString(),
         };
-        await setDoc(doc(seasonGamesCol(season.id), gameId), gameData);
+        batch.set(doc(seasonGamesCol(season.id), gameId), gameData);
+        opCount++;
 
         const allStats = [...result.homeStats, ...result.awayStats];
         for (const stat of allStats) {
-          await setDoc(doc(collection(db, 'seasons', season.id, 'games', gameId, 'stats'), stat.playerId), stat);
+          batch.set(doc(collection(db, 'seasons', season.id, 'games', gameId, 'stats'), stat.playerId), stat);
+          opCount++;
+          if (opCount >= 450) await commitBatch();
         }
 
         games.push({ ...gameData, id: gameId });
       }
 
-      await updateDoc(seasonDoc(season.id), { currentWeek: week });
+      batch.update(seasonDoc(season.id), { currentWeek: week });
+      opCount++;
+
       const isSeasonOver = week >= currentSeason.totalWeeks;
       if (isSeasonOver) {
-        await updateDoc(seasonDoc(season.id), { status: 'completed', completedAt: new Date().toISOString() });
+        batch.update(seasonDoc(season.id), { status: 'completed', completedAt: new Date().toISOString() });
+        opCount++;
         const champId = uid();
-        await setDoc(championshipDoc(id, champId), {
+        batch.set(championshipDoc(id, champId), {
           seasonNumber: currentSeason.seasonNumber, teamId: games[0]?.homeTeamId || '',
           createdAt: new Date().toISOString(),
         });
+        opCount++;
         const newSeasonId = uid();
-        await setDoc(doc(db, 'seasons', newSeasonId), {
+        batch.set(doc(db, 'seasons', newSeasonId), {
           leagueId: id, seasonNumber: (currentSeason.seasonNumber || 1) + 1,
           status: 'pregame', currentWeek: 0, totalWeeks: 24,
           createdAt: new Date().toISOString(),
         });
-        await updateDoc(leagueDoc(id), { currentSeason: (currentSeason.seasonNumber || 1) + 1 });
+        opCount++;
+        batch.update(leagueDoc(id), { currentSeason: (currentSeason.seasonNumber || 1) + 1 });
+        opCount++;
       }
+
+      await commitBatch();
 
       if (Math.random() > 0.6) {
         const story = generateStory(teams, ['general', 'trade', 'rivalry', 'mvp'][Math.floor(Math.random() * 4)]);
@@ -175,9 +187,76 @@ export default function LeagueDetail() {
     setSimming(true);
     try {
       const totalWeeks = season.totalWeeks;
-      for (let w = 1; w <= totalWeeks; w++) {
-        await simWeek();
+      let currentSeason = season;
+      if (season.status === 'pregame') {
+        await updateDoc(seasonDoc(season.id), { status: 'regular' });
+        currentSeason = { ...season, status: 'regular' };
       }
+
+      for (let w = 1; w <= totalWeeks; w++) {
+        const week = (currentSeason.currentWeek || 0) + w;
+        const isPlayoffs = week > currentSeason.totalWeeks - 4;
+        const teamIds = teams.map(t => t.id);
+        const pairs = generateSchedule(teamIds);
+        const games = [];
+
+        let batch = writeBatch(db);
+        let opCount = 0;
+
+        for (const pair of pairs) {
+          const gameId = uid();
+          const homeTeam = teams.find(t => t.id === pair.home);
+          const awayTeam = teams.find(t => t.id === pair.away);
+          if (!homeTeam || !awayTeam) continue;
+
+          const homePlayers = (homeTeam.players || []).map(p => ({ ...p, teamId: homeTeam.id }));
+          const awayPlayers = (awayTeam.players || []).map(p => ({ ...p, teamId: awayTeam.id }));
+
+          const result = simulateGame(homePlayers, awayPlayers);
+          batch.set(doc(seasonGamesCol(season.id), gameId), {
+            seasonId: season.id, week, homeTeamId: pair.home, awayTeamId: pair.away,
+            homeScore: result.homeScore, awayScore: result.awayScore,
+            isPlayoff: isPlayoffs ? 1 : 0, isCompleted: 1,
+            playedAt: new Date().toISOString(),
+          });
+          opCount++;
+
+          const allStats = [...result.homeStats, ...result.awayStats];
+          for (const stat of allStats) {
+            batch.set(doc(collection(db, 'seasons', season.id, 'games', gameId, 'stats'), stat.playerId), stat);
+            opCount++;
+            if (opCount >= 450) { await batch.commit(); batch = writeBatch(db); opCount = 0; }
+          }
+
+          games.push({ id: gameId });
+        }
+
+        batch.update(seasonDoc(season.id), { currentWeek: week });
+        opCount++;
+
+        const isSeasonOver = week >= currentSeason.totalWeeks;
+        if (isSeasonOver) {
+          batch.update(seasonDoc(season.id), { status: 'completed', completedAt: new Date().toISOString() });
+          opCount++;
+          batch.set(championshipDoc(id, uid()), {
+            seasonNumber: currentSeason.seasonNumber, teamId: games[0]?.homeTeamId || '',
+            createdAt: new Date().toISOString(),
+          });
+          opCount++;
+          batch.set(doc(db, 'seasons', uid()), {
+            leagueId: id, seasonNumber: (currentSeason.seasonNumber || 1) + 1,
+            status: 'pregame', currentWeek: 0, totalWeeks: 24,
+            createdAt: new Date().toISOString(),
+          });
+          opCount++;
+          batch.update(leagueDoc(id), { currentSeason: (currentSeason.seasonNumber || 1) + 1 });
+          opCount++;
+        }
+
+        if (opCount > 0) await batch.commit();
+      }
+
+      load();
     } finally {
       setSimming(false);
     }

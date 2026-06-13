@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   onAuthStateChanged, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, signOut, updateProfile
@@ -34,11 +34,11 @@ export function AuthProvider({ children }) {
     return unsub;
   }, []);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     await signInWithEmailAndPassword(auth, email, password);
-  };
+  }, []);
 
-  const register = async (email, password, displayName) => {
+  const register = useCallback(async (email, password, displayName) => {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName });
     await setDoc(userDoc(cred.user.uid), {
@@ -47,14 +47,16 @@ export function AuthProvider({ children }) {
       isPremium: false,
       createdAt: new Date().toISOString(),
     });
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await signOut(auth);
-  };
+  }, []);
+
+  const value = useMemo(() => ({ user, loading, login, register, logout }), [user, loading, login, register, logout]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

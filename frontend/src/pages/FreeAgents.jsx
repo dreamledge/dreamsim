@@ -32,13 +32,13 @@ export default function FreeAgents() {
         setUserTeam(teams.find(t => t.userId === user?.id) || null);
 
         const takenIds = new Set();
-        for (const team of teams) {
-          try {
-            const pSnap = await getDocs(teamPlayersCol(team.id));
-            pSnap.docs.forEach(d => {
-              if (d.data().playerId) takenIds.add(d.data().playerId);
-            });
-          } catch (e) {}
+        const playerSnapshots = await Promise.all(
+          teams.map(team => getDocs(teamPlayersCol(team.id)).catch(() => ({ docs: [] })))
+        );
+        for (const pSnap of playerSnapshots) {
+          pSnap.docs.forEach(d => {
+            if (d.data().playerId) takenIds.add(d.data().playerId);
+          });
         }
 
         const pool = NBA_PLAYER_POOL.players || [];

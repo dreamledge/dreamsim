@@ -1,30 +1,37 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import LeagueList from './pages/LeagueList';
-import LeagueDetail from './pages/LeagueDetail';
-import CreateLeague from './pages/CreateLeague';
-import TeamDetail from './pages/TeamDetail';
-import CreateTeam from './pages/CreateTeam';
-import Draft from './pages/Draft';
-import SeasonView from './pages/SeasonView';
-import Trades from './pages/Trades';
-import TradeCenter from './pages/TradeCenter';
-import Stats from './pages/Stats';
-import Store from './pages/Store';
-import NewsFeed from './pages/NewsFeed';
-import LeagueNews from './pages/LeagueNews';
-import LeagueDraft from './pages/LeagueDraft';
-import Standings from './pages/Standings';
-import FreeAgents from './pages/FreeAgents';
-import AudioProvider from './components/AudioProvider';
+
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const LeagueList = lazy(() => import('./pages/LeagueList'));
+const LeagueDetail = lazy(() => import('./pages/LeagueDetail'));
+const CreateLeague = lazy(() => import('./pages/CreateLeague'));
+const TeamDetail = lazy(() => import('./pages/TeamDetail'));
+const CreateTeam = lazy(() => import('./pages/CreateTeam'));
+const Draft = lazy(() => import('./pages/Draft'));
+const SeasonView = lazy(() => import('./pages/SeasonView'));
+const Trades = lazy(() => import('./pages/Trades'));
+const TradeCenter = lazy(() => import('./pages/TradeCenter'));
+const Stats = lazy(() => import('./pages/Stats'));
+const Store = lazy(() => import('./pages/Store'));
+const NewsFeed = lazy(() => import('./pages/NewsFeed'));
+const LeagueNews = lazy(() => import('./pages/LeagueNews'));
+const LeagueDraft = lazy(() => import('./pages/LeagueDraft'));
+const Standings = lazy(() => import('./pages/Standings'));
+const FreeAgents = lazy(() => import('./pages/FreeAgents'));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen bg-[#1a1a2e]">
+    <div className="animate-spin h-8 w-8 border-4 border-[#e94560] border-t-transparent rounded-full" />
+  </div>
+);
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen bg-[#1a1a2e]"><div className="animate-spin h-8 w-8 border-4 border-[#e94560] border-t-transparent rounded-full" /></div>;
+  if (loading) return <PageLoader />;
   if (!user) return <Navigate to="/login" />;
   return children;
 }
@@ -32,7 +39,7 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <div className="min-h-screen bg-[#1a1a2e] text-white">
-      <AudioProvider>
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -54,7 +61,7 @@ export default function App() {
         <Route path="/stats" element={<ProtectedRoute><Layout><Stats /></Layout></ProtectedRoute>} />
         <Route path="/store" element={<ProtectedRoute><Layout><Store /></Layout></ProtectedRoute>} />
       </Routes>
-      </AudioProvider>
+      </Suspense>
     </div>
   );
 }
