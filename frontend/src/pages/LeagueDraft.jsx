@@ -4,7 +4,7 @@ import { doc, getDoc, getDocs, setDoc, updateDoc, onSnapshot, query, where, orde
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { uid, leagueDoc, teamsCol, teamPlayersCol, teamPlayerDoc, draftsCol, draftDoc, draftPicksCol, draftPickDoc, nbaPoolDoc } from '../lib/firestore';
-import { draftNbaPlayers, ensureNbaPool, getPoolSize } from '../engine/gameEngine';
+import { draftNbaPlayers, ensureNbaPool, getPoolSize, generateRookies } from '../engine/gameEngine';
 import DraftDatePicker from '../components/DraftDatePicker';
 import ScoutModal from '../components/ScoutModal';
 
@@ -20,9 +20,17 @@ function shuffle(arr) {
   return a;
 }
 
-async function generateAvailablePlayers(count) {
+async function generateAvailablePlayers(count, isExpansion = false) {
   await ensureNbaPool();
-  return draftNbaPlayers(count);
+  const nbaPlayers = await draftNbaPlayers(count);
+
+  if (!isExpansion) {
+    const rookieCount = Math.ceil(count * 0.25);
+    const rookies = generateRookies(rookieCount);
+    return [...nbaPlayers, ...rookies];
+  }
+
+  return nbaPlayers;
 }
 
 const POSITION_ELIGIBILITY = {
@@ -354,7 +362,7 @@ export default function LeagueDraft() {
 
     try {
       const count = totalRounds > 3 ? getPoolSize() : totalPicks;
-      const players = await generateAvailablePlayers(count);
+      const players = await generateAvailablePlayers(count, totalRounds <= 2);
       let batch = writeBatch(db);
       let opCount = 0;
       for (const p of players) {
@@ -422,7 +430,7 @@ export default function LeagueDraft() {
       const pSnap = await getDocs(collection(db, 'leagues', id, 'drafts', dId, 'players'));
       if (pSnap.empty) {
         const count = totalRounds > 3 ? getPoolSize() : totalPicks;
-        const players = await generateAvailablePlayers(count);
+        const players = await generateAvailablePlayers(count, totalRounds <= 2);
         let poolBatch = writeBatch(db);
         let poolCount = 0;
         for (const p of players) {
