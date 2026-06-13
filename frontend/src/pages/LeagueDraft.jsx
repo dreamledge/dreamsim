@@ -472,6 +472,7 @@ export default function LeagueDraft() {
     await updateDoc(draftPickDoc(id, draft.id, pickId), {
       playerId: player.id,
       playerName: `${player.firstName} ${player.lastName}`,
+      playerData: { ...player },
       status: 'picked',
       pickedAt: new Date().toISOString(),
     });
@@ -550,6 +551,7 @@ export default function LeagueDraft() {
     await updateDoc(draftPickDoc(id, draft.id, pickId), {
       playerId: best.id,
       playerName: `${best.firstName} ${best.lastName}`,
+      playerData: { ...best },
       status: 'auto',
       pickedAt: new Date().toISOString(),
     });
@@ -580,7 +582,6 @@ export default function LeagueDraft() {
   };
 
   const saveDraftedPlayers = async () => {
-    const allPicks = [...picks];
     const dSnap = await getDocs(query(draftPicksCol(id, draft.id), orderBy('order')));
     const finalPicks = dSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -592,30 +593,38 @@ export default function LeagueDraft() {
       const pSnap = await getDocs(teamPlayersCol(team.id));
       const existing = pSnap.docs.length;
 
-      const playerData = { ...pick };
-      delete playerData.id;
-      delete playerData.order;
-      delete playerData.round;
-      delete playerData.teamId;
-      delete playerData.teamName;
-      delete playerData.playerId;
-      delete playerData.playerName;
-      delete playerData.status;
-      delete playerData.pickedAt;
+      const pd = pick.playerData || {};
 
-      const pId = pick.playerId;
-      await setDoc(doc(teamPlayersCol(team.id), pId), {
-        id: pId,
-        firstName: pick.playerName?.split(' ')[0] || 'Player',
-        lastName: pick.playerName?.split(' ').slice(1).join(' ') || 'Unknown',
-        primaryPosition: pick.primaryPosition || POSITIONS[finalPicks.indexOf(pick) % 5],
-        canPlay: pick.canPlay || [POSITIONS[finalPicks.indexOf(pick) % 5]],
-        overall: 50 + Math.floor(Math.random() * 35),
-        age: 19 + Math.floor(Math.random() * 7),
+      await setDoc(doc(teamPlayersCol(team.id), pick.playerId), {
+        id: pick.playerId,
+        firstName: pd.firstName || pick.playerName?.split(' ')[0] || 'Player',
+        lastName: pd.lastName || pick.playerName?.split(' ').slice(1).join(' ') || 'Unknown',
+        primaryPosition: pd.primaryPosition || pd.position || 'SF',
+        canPlay: pd.canPlay || ['PG', 'SG', 'SF', 'PF', 'C'],
+        overall: pd.overall || 50,
+        age: pd.age || 22,
+        height: pd.height || 78,
+        weight: pd.weight || 210,
+        offense: pd.offense || 50,
+        defense: pd.defense || 50,
+        shooting: pd.shooting || 50,
+        playmaking: pd.playmaking || 50,
+        rebounding: pd.rebounding || 50,
+        athleticism: pd.athleticism || 50,
+        potential: pd.potential || 75,
+        nbaTeam: pd.nbaTeam || null,
+        statsPpg: pd.statsPpg || 0,
+        statsRpg: pd.statsRpg || 0,
+        statsApg: pd.statsApg || 0,
+        statsSpg: pd.statsSpg || 0,
+        statsBpg: pd.statsBpg || 0,
+        statsFgPct: pd.statsFgPct || 0.45,
+        statsThreePct: pd.statsThreePct || 0.33,
         teamId: team.id,
         seasonId: league?.currentSeason || 1,
         isStarter: existing < 5 ? 1 : 0,
         lineupPosition: existing < 5 ? existing : null,
+        isRookie: pd.isRookie || false,
       });
     }
   };
