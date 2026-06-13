@@ -334,7 +334,7 @@ export default function LeagueDraft() {
         hasPlayers = !pSnap.empty;
       }
     } catch {}
-    const totalRounds = hasPlayers ? 3 : 15;
+    const totalRounds = hasPlayers ? 2 : 15;
     const totalPicks = currentTeams.length * totalRounds;
 
     await setDoc(draftDoc(id, dId), {
@@ -377,7 +377,7 @@ export default function LeagueDraft() {
     if (!draft || isStarting) return;
     setIsStarting(true);
     try {
-      const totalRounds = draft.totalRounds || 3;
+      const totalRounds = draft.totalRounds || 2;
       const orderSeed = totalRounds > 3 ? shuffle(teams) : generateLotteryOrder(teams);
       const totalPicks = teams.length * totalRounds;
       const dId = draft.id;
@@ -482,7 +482,7 @@ export default function LeagueDraft() {
 
     const draftSnap = await getDoc(draftDoc(id, draft.id));
     const freshDraft = draftSnap.data();
-    const realTotalPicks = teams.length * (freshDraft?.totalRounds || 3);
+    const realTotalPicks = teams.length * (freshDraft?.totalRounds || 2);
     const nextPick = (freshDraft?.currentPick || draft.currentPick) + 1;
     if (nextPick > realTotalPicks) {
       await updateDoc(draftDoc(id, draft.id), {
@@ -562,7 +562,7 @@ export default function LeagueDraft() {
     // Step 11: Re-read draft state to calculate the real total picks and advance
     const draftSnap2 = await getDoc(draftDoc(id, draft.id));
     const freshDraft2 = draftSnap2.data();
-    const realTotalPicks = teams.length * (freshDraft2?.totalRounds || 3);
+    const realTotalPicks = teams.length * (freshDraft2?.totalRounds || 2);
     const nextPick = (freshDraft2?.currentPick || draft.currentPick) + 1;
     if (nextPick > realTotalPicks) {
       await updateDoc(draftDoc(id, draft.id), {
@@ -627,7 +627,7 @@ export default function LeagueDraft() {
   const isMyTurn = currentPick && userTeam && currentPick.teamId === userTeam.id;
   const draftedIds = picks.filter(p => p.status === 'picked' || p.status === 'auto').map(p => p.playerId);
   const undraftedPlayers = availablePlayers.filter(p => !draftedIds.includes(p.id));
-  const computedTotalPicks = teams.length * (draft?.totalRounds || 3);
+  const computedTotalPicks = teams.length * (draft?.totalRounds || 2);
 
   if (loading) return (
     <div className="flex justify-center py-12">
@@ -663,7 +663,7 @@ export default function LeagueDraft() {
           <div className="bg-[var(--bg-secondary)] rounded-xl p-4 space-y-2">
             <h3 className="font-display text-sm tracking-wider">Draft Settings</h3>
             <div className="text-xs text-[var(--text-secondary)] space-y-1">
-              <p>• {season?.seasonNumber === 1 && season?.status === 'pregame' ? '15 rounds (expansion)' : '3 rounds'}, snake order</p>
+              <p>• {draft?.totalRounds > 3 ? '15 rounds (expansion)' : `${draft?.totalRounds || 2} rounds`}, snake order</p>
               <p>• 90 seconds per pick</p>
               <p>• CPU auto-picks for absent teams</p>
               <p>• {teams.length} teams participating</p>
@@ -689,7 +689,7 @@ export default function LeagueDraft() {
         )}
         <p className="text-xs text-[var(--text-tertiary)]">Commissioner will start the draft when ready</p>
         <div className="bg-[var(--bg-secondary)] rounded-xl p-3 text-xs text-[var(--text-secondary)] space-y-1">
-          <p>• {draft?.totalRounds > 3 ? '15 rounds (expansion)' : '3 rounds'}, snake order</p>
+          <p>• {draft?.totalRounds > 3 ? '15 rounds (expansion)' : `${draft?.totalRounds || 2} rounds`}, snake order</p>
           <p>• 90 seconds per pick</p>
           <p>• CPU auto-picks for absent teams</p>
           <p>• {undraftedPlayers.length} players in the pool</p>
@@ -766,7 +766,7 @@ export default function LeagueDraft() {
                 <span>{p.teamName}</span>
               </div>
             ))}
-            <p className="text-center text-[var(--text-tertiary)] pt-1">{computedTotalPicks} total picks &middot; {draft?.totalRounds || 3} rounds</p>
+            <p className="text-center text-[var(--text-tertiary)] pt-1">{computedTotalPicks} total picks &middot; {draft?.totalRounds || 2} rounds</p>
           </div>
         </div>
       </div>
