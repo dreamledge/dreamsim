@@ -520,6 +520,178 @@ export async function draftNbaPlayers(count = 5) {
   return shuffled.slice(0, count);
 }
 
+const FIRST_NAMES = [
+  'Marcus', 'Jaylen', 'Tyrese', 'Jalen', 'Anthony', 'DeAndre', 'Cam', 'Jordan',
+  'Kyle', 'Tyler', 'Derrick', 'Malik', 'Isaiah', 'Devin', 'Trae', 'Ja',
+  'Zion', 'RJ', 'Cole', 'Cade', 'Scottie', 'Evan', 'Alperen', 'Franz',
+  'Jabari', 'Chet', 'Paolo', 'Keegan', 'Bennedict', 'Jaden', 'Walker',
+  'Dyson', 'Tari', 'MarJon', 'Christian', 'Kennedy', 'Ayo', 'Tre',
+  'Davion', 'James', 'Jonathan', 'Usman', 'Day\'Ron', 'Quentin', 'Herbert',
+  'Santi', 'Xavier', 'Trey', 'Keon', 'Jalen', 'Caris', 'Deni', 'Patrick',
+];
+
+const LAST_NAMES = [
+  'Williams', 'Johnson', 'Brown', 'Davis', 'Smith', 'Jackson', 'Thompson',
+  'Morris', 'Green', 'Harris', 'Clark', 'Lewis', 'Robinson', 'Walker',
+  'Young', 'Allen', 'King', 'Wright', 'Scott', 'Hill', 'Barnes',
+  'Adams', 'Nelson', 'Mitchell', 'Roberts', 'Carter', 'Phillips', 'Evans',
+  'Turner', 'Torres', 'Parker', 'Collins', 'Edwards', 'Stewart', 'Flores',
+  'Morris', 'Nguyen', 'Murphy', 'Rivera', 'Cook', 'Rogers', 'Morgan',
+  'Peterson', 'Cooper', 'Reed', 'Bailey', 'Bell', 'Gomez', 'Kelly',
+  'Howard', 'Ward', 'Cox', 'Diaz', 'Richardson', 'Wood', 'Watson',
+];
+
+const COLLEGE_NAMES = [
+  'Duke', 'Kentucky', 'Kansas', 'Gonzaga', 'UCLA', 'Michigan', 'North Carolina',
+  'Villanova', 'Baylor', 'Houston', 'Purdue', 'Arizona', 'Texas', 'Arkansas',
+  'Auburn', 'Tennessee', 'Illinois', 'Connecticut', 'Oregon', 'USC',
+  'Alabama', 'Iowa State', 'TCU', 'Xavier', 'Memphis', 'San Diego State',
+  'Florida Atlantic', 'Princeton', 'Florida', 'Maryland', 'Indiana',
+];
+
+const ARCHETYPE_DISTRIBUTION = [
+  { position: 'PG', weight: 18 },
+  { position: 'SG', weight: 20 },
+  { position: 'SF', weight: 22 },
+  { position: 'PF', weight: 20 },
+  { position: 'C', weight: 20 },
+];
+
+const POSITION_MEASURABLES = {
+  PG: { heightMin: 72, heightMax: 76, weightMin: 175, weightMax: 200, wingspanMin: 76, wingspanMax: 80 },
+  SG: { heightMin: 75, heightMax: 78, weightMin: 190, weightMax: 215, wingspanMin: 78, wingspanMax: 82 },
+  SF: { heightMin: 77, heightMax: 81, weightMin: 200, weightMax: 230, wingspanMin: 80, wingspanMax: 85 },
+  PF: { heightMin: 79, heightMax: 83, weightMin: 220, weightMax: 250, wingspanMin: 83, wingspanMax: 87 },
+  C: { heightMin: 81, heightMax: 84, weightMin: 240, weightMax: 275, wingspanMin: 84, wingspanMax: 89 },
+};
+
+function pickWeightedPosition() {
+  const totalWeight = ARCHETYPE_DISTRIBUTION.reduce((s, a) => s + a.weight, 0);
+  let r = Math.random() * totalWeight;
+  for (const { position, weight } of ARCHETYPE_DISTRIBUTION) {
+    r -= weight;
+    if (r <= 0) return position;
+  }
+  return 'SF';
+}
+
+function randomRange(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+function randomFrom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function generateRookieAttributes(position, overallTarget) {
+  const base = overallTarget;
+  const variance = () => Math.floor(Math.random() * 10) - 5;
+
+  const offense = Math.max(30, Math.min(99, base + variance()));
+  const defense = Math.max(30, Math.min(99, base + variance()));
+  const shooting = Math.max(30, Math.min(99, base + variance()));
+  const playmaking = Math.max(30, Math.min(99, base + variance()));
+  const rebounding = Math.max(30, Math.min(99, base + variance()));
+  const athleticism = Math.max(30, Math.min(99, base + variance()));
+
+  const statScale = base / 100;
+  const ppg = Math.round((8 + Math.random() * 18) * statScale * 10) / 10;
+  const rpg = Math.round((2 + Math.random() * 10) * statScale * 10) / 10;
+  const apg = Math.round((1 + Math.random() * 8) * statScale * 10) / 10;
+  const spg = Math.round((0.3 + Math.random() * 2) * statScale * 10) / 10;
+  const bpg = Math.round((0.1 + Math.random() * 2) * statScale * 10) / 10;
+
+  return {
+    offense, defense, shooting, playmaking, rebounding, athleticism,
+    ppg, rpg, apg, spg, bpg,
+    statsFgPct: Math.round((0.38 + Math.random() * 0.12) * 100) / 100,
+    statsThreePct: Math.round((0.28 + Math.random() * 0.14) * 100) / 100,
+  };
+}
+
+export function generateRookies(count = 75) {
+  const rookies = [];
+  const usedNames = new Set();
+
+  for (let i = 0; i < count; i++) {
+    let firstName, lastName, fullName;
+    do {
+      firstName = randomFrom(FIRST_NAMES);
+      lastName = randomFrom(LAST_NAMES);
+      fullName = `${firstName} ${lastName}`;
+    } while (usedNames.has(fullName));
+    usedNames.add(fullName);
+
+    const position = pickWeightedPosition();
+    const measurables = POSITION_MEASURABLES[position];
+
+    const overallRoll = Math.random();
+    let overall;
+    if (overallRoll < 0.05) overall = randomRange(80, 85);
+    else if (overallRoll < 0.20) overall = randomRange(75, 79);
+    else if (overallRoll < 0.50) overall = randomRange(70, 74);
+    else if (overallRoll < 0.80) overall = randomRange(65, 69);
+    else overall = randomRange(55, 64);
+
+    const age = randomRange(19, 22);
+    const height = randomRange(measurables.heightMin, measurables.heightMax);
+    const weight = randomRange(measurables.weightMin, measurables.weightMax);
+    const wingspan = randomRange(measurables.wingspanMin, measurables.wingspanMax);
+
+    let potential;
+    if (overall >= 80) potential = randomFrom(['A+', 'A', 'A-']);
+    else if (overall >= 75) potential = randomFrom(['A-', 'B+', 'B']);
+    else if (overall >= 70) potential = randomFrom(['B', 'B-', 'C+']);
+    else if (overall >= 65) potential = randomFrom(['C+', 'C', 'C-']);
+    else potential = randomFrom(['C-', 'D+', 'D']);
+
+    const attrs = generateRookieAttributes(position, overall);
+
+    const id = `rookie_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 8)}`;
+
+    rookies.push({
+      id,
+      firstName,
+      lastName,
+      position: position,
+      primaryPosition: position,
+      canPlay: [position],
+      nbaTeam: null,
+      age,
+      height,
+      weight,
+      wingspan,
+      overall,
+      potential,
+      offense: attrs.offense,
+      defense: attrs.defense,
+      shooting: attrs.shooting,
+      playmaking: attrs.playmaking,
+      rebounding: attrs.rebounding,
+      athleticism: attrs.athleticism,
+      statsPpg: attrs.ppg,
+      statsRpg: attrs.rpg,
+      statsApg: attrs.apg,
+      statsSpg: attrs.spg,
+      statsBpg: attrs.bpg,
+      statsFgPct: attrs.statsFgPct,
+      statsThreePct: attrs.statsThreePct,
+      statsFtPct: Math.round((0.65 + Math.random() * 0.2) * 100) / 100,
+      statsGamesPlayed: 0,
+      college: randomFrom(COLLEGE_NAMES),
+      injuryProne: Math.floor(Math.random() * 30),
+      morale: 50 + Math.floor(Math.random() * 30),
+      contractYears: 4,
+      contractValue: Math.round((overall / 99) * 12000000),
+      isInjured: false,
+      injuryWeeks: 0,
+      isRookie: true,
+    });
+  }
+
+  return rookies;
+}
+
 export function parseHeight(str) {
   if (!str || typeof str !== 'string') return 78;
   const parts = str.split('-');

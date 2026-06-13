@@ -1,5 +1,5 @@
 import { uid } from '../lib/firestore';
-import { draftNbaPlayers, ensureNbaPool, getNbaPlayerPool, getPoolSize } from './nbaPlayers';
+import { draftNbaPlayers, ensureNbaPool, getNbaPlayerPool, getPoolSize, generateRookies } from './nbaPlayers';
 
 const POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C'];
 
@@ -211,4 +211,4 @@ export function draftPlayers(count = 5) {
   return players;
 }
 
-export { draftNbaPlayers, ensureNbaPool, getNbaPlayerPool, getPoolSize };
+export { draftNbaPlayers, ensureNbaPool, getNbaPlayerPool, getPoolSize, generateRookies };
