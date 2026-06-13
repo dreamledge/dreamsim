@@ -86,32 +86,59 @@ export default function Home() {
     if (!confirm(`Delete "${league.name}" and all its data? This cannot be undone.`)) return;
     setDeletingIds(prev => new Set(prev).add(league.id));
     try {
-      const teamsSnap = await getDocs(query(teamsCol(), where('leagueId', '==', league.id)));
-      for (const team of teamsSnap.docs) {
-        const playersSnap = await getDocs(teamPlayersCol(team.id));
-        for (const p of playersSnap.docs) {
-          await deleteDoc(p.ref);
-        }
-        await deleteDoc(team.ref);
+      // --- Phase 1: Fetch ALL subcollections in parallel ---
+      const [teamsSnap, membersSnap, newsSnap, champSnap, draftsSnap] = await Promise.all([
+        getDocs(query(teamsCol(), where('leagueId', '==', league.id))),
+        getDocs(leagueMembersCol(league.id)),
+        getDocs(leagueNewsCol(league.id)),
+        getDocs(championshipsCol(league.id)),
+        getDocs(draftsCol(league.id)),
+      ]);
+
+      // Fetch draft picks and team players in parallel too
+      const [picksSnaps, playersSnaps] = await Promise.all([
+        Promise.all(draftsSnap.docs.map(d => getDocs(draftPicksCol(league.id, d.id)))),
+        Promise.all(teamsSnap.docs.map(t => getDocs(teamPlayersCol(t.id)))),
+      ]);
+
+      // --- Phase 2: Collect ALL document refs into a flat array ---
+      const refs = [];
+
+      // Team players
+      for (const snap of playersSnaps) {
+        for (const p of snap.docs) refs.push(p.ref);
       }
-
-      const membersSnap = await getDocs(leagueMembersCol(league.id));
-      for (const m of membersSnap.docs) await deleteDoc(m.ref);
-
-      const newsSnap = await getDocs(leagueNewsCol(league.id));
-      for (const n of newsSnap.docs) await deleteDoc(n.ref);
-
-      const champSnap = await getDocs(championshipsCol(league.id));
-      for (const c of champSnap.docs) await deleteDoc(c.ref);
-
-      const draftsSnap = await getDocs(draftsCol(league.id));
-      for (const d of draftsSnap.docs) {
-        const picksSnap = await getDocs(draftPicksCol(league.id, d.id));
-        for (const p of picksSnap.docs) await deleteDoc(p.ref);
-        await deleteDoc(d.ref);
+      // Teams
+      for (const t of teamsSnap.docs) refs.push(t.ref);
+      // Members
+      for (const m of membersSnap.docs) refs.push(m.ref);
+      // News
+      for (const n of newsSnap.docs) refs.push(n.ref);
+      // Championships
+      for (const c of champSnap.docs) refs.push(c.ref);
+      // Draft picks
+      for (const snap of picksSnaps) {
+        for (const p of snap.docs) refs.push(p.ref);
       }
+      // Drafts
+      for (const d of draftsSnap.docs) refs.push(d.ref);
+      // League document itself
+      refs.push(leagueDoc(league.id));
 
-      await deleteDoc(leagueDoc(league.id));
+      // --- Phase 3: Batch-delete in chunks of 500, commits in parallel ---
+      const BATCH_SIZE = 500;
+      const batches = [];
+      for (let i = 0; i < refs.length; i += BATCH_SIZE) {
+        batches.push(refs.slice(i, i + BATCH_SIZE));
+      }
+      await Promise.all(
+        batches.map(async (chunk) => {
+          const batch = writeBatch(db);
+          chunk.forEach(ref => batch.delete(ref));
+          return batch.commit();
+        })
+      );
+
       setUserLeagues(prev => prev.filter(l => l.id !== league.id));
     } catch (err) {
       console.error('Failed to delete league:', err);

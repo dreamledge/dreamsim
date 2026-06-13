@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, getDocs, setDoc, updateDoc, onSnapshot, query, where, orderBy, limit, deleteDoc, collection, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -143,36 +143,42 @@ export default function LeagueDraft() {
   const [countdown, setCountdown] = useState('');
   const [scoutPlayer, setScoutPlayer] = useState(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [playerSearch, setPlayerSearch] = useState('');
+  const [playerPosFilter, setPlayerPosFilter] = useState('');
   const timerRef = useRef(null);
   const countdownRef = useRef(null);
+  const autoPickInProgress = useRef(false);
+  const pickInProgress = useRef(false);
+  const waitingPickCount = useMemo(() => picks.filter(p => p.status === 'waiting').length, [picks]);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const lSnap = await getDoc(leagueDoc(id));
+        const [lSnap, tSnap, dSnap] = await Promise.all([
+          getDoc(leagueDoc(id)),
+          getDocs(query(teamsCol(), where('leagueId', '==', id))),
+          getDocs(query(draftsCol(id), orderBy('createdAt', 'desc'), limit(1))),
+        ]);
+
         if (!lSnap.exists()) { navigate('/leagues'); return; }
         setLeague({ id: lSnap.id, ...lSnap.data() });
 
-        const tSnap = await getDocs(query(teamsCol(), where('leagueId', '==', id)));
         const tData = tSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         setTeams(tData);
         setUserTeam(tData.find(t => t.userId === user?.id) || null);
+
+        if (!dSnap.empty) {
+          const d = { id: dSnap.docs[0].id, ...dSnap.docs[0].data() };
+          setDraft(d);
+          if (d.status !== 'completed') loadPlayers(d.id);
+          if (d.status === 'joining' || d.status === 'live' || d.status === 'completed') loadPicks(d.id);
+        }
 
         try {
           const sSnap = await getDocs(query(collection(db, 'seasons'), where('leagueId', '==', id)));
           const seasonsList = sSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.seasonNumber || 0) - (a.seasonNumber || 0));
           if (seasonsList.length > 0) setSeason(seasonsList[0]);
-        } catch (e) { console.error('season query:', e); }
-
-        const dSnap = await getDocs(query(draftsCol(id), orderBy('createdAt', 'desc'), limit(1)));
-        if (!dSnap.empty) {
-          const d = { id: dSnap.docs[0].id, ...dSnap.docs[0].data() };
-          setDraft(d);
-          if (d.status === 'scheduled' || d.status === 'joining' || d.status === 'live' || d.status === 'completed') {
-            if (d.status !== 'completed') loadPlayers(d.id);
-            if (d.status === 'joining' || d.status === 'live' || d.status === 'completed') loadPicks(d.id);
-          }
-        }
+        } catch (e) {}
       } catch (err) { console.error('load error:', err); }
       setLoading(false);
     };
@@ -231,37 +237,61 @@ export default function LeagueDraft() {
   }, [draft?.id, draft?.status]);
 
   useEffect(() => {
-    if (!draft || draft.status !== 'live') { setTimeLeft(120); return; }
+    if (!draft || draft.status !== 'live') { setTimeLeft(draft?.pickTimeLimit || 120); return; }
+    if (picks.length === 0) return;
     const currentPick = picks.find(p => p.order === draft.currentPick);
-    if (!currentPick || currentPick.status !== 'waiting') return;
+    if (!currentPick) return;
+    if (currentPick.status !== 'waiting') return;
 
+    const pickTimeLimit = draft.pickTimeLimit || 120;
     let cancelled = false;
+
     const run = async () => {
-      const teamSnap = await getDocs(query(teamsCol(), where('leagueId', '==', id)));
-      const allTeams = teamSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      if (cancelled) return;
+      try {
+        const teamSnap = await getDocs(query(teamsCol(), where('leagueId', '==', id)));
+        const allTeams = teamSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (cancelled) return;
 
-      const team = allTeams.find(t => t.id === currentPick.teamId);
-      const isAi = team && (team.isAi === 1 || team.userId === 'ai');
-      const userHasJoined = team && draft?.joinedUsers?.includes(team.userId);
-      if (isAi || (team && team.userId !== 'ai' && !userHasJoined)) {
-        handleAutoPick();
-        return;
+        const team = allTeams.find(t => t.id === currentPick.teamId);
+        const isAi = team && (team.isAi === 1 || team.userId === 'ai');
+        const userHasJoined = team && draft?.joinedUsers?.includes(team.userId);
+        if (isAi || (team && team.userId !== 'ai' && !userHasJoined)) {
+          if (!autoPickInProgress.current) {
+            handleAutoPick().catch(err => {
+              console.error('Auto-pick (AI/non-joined) failed:', err);
+              setTimeout(() => { if (!cancelled && !autoPickInProgress.current) handleAutoPick().catch(console.error); }, 2000);
+            });
+          }
+          return;
+        }
+
+        const started = draft.pickStartedAt ? new Date(draft.pickStartedAt).getTime() : Date.now();
+        const updateTimer = () => {
+          const elapsed = Math.floor((Date.now() - started) / 1000);
+          const remaining = Math.max(0, pickTimeLimit - elapsed);
+          setTimeLeft(remaining);
+          if (remaining <= 0) {
+            if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+            if (!autoPickInProgress.current) {
+              handleAutoPick().catch(err => {
+                console.error('Auto-pick (timer expired) failed:', err);
+                setTimeout(() => { if (!cancelled && !autoPickInProgress.current) handleAutoPick().catch(console.error); }, 2000);
+              });
+            }
+          }
+        };
+        updateTimer();
+        timerRef.current = setInterval(updateTimer, 1000);
+      } catch (err) {
+        console.error('Timer setup failed:', err);
+        if (!cancelled) {
+          setTimeout(() => { if (!cancelled) run().catch(console.error); }, 2000);
+        }
       }
-
-      const started = draft.pickStartedAt ? new Date(draft.pickStartedAt).getTime() : Date.now();
-      const updateTimer = () => {
-        const elapsed = Math.floor((Date.now() - started) / 1000);
-        const remaining = Math.max(0, 120 - elapsed);
-        setTimeLeft(remaining);
-        if (remaining <= 0) handleAutoPick();
-      };
-      updateTimer();
-      timerRef.current = setInterval(updateTimer, 1000);
     };
-    run();
-    return () => { cancelled = true; if (timerRef.current) clearInterval(timerRef.current); };
-  }, [draft?.currentPick, draft?.pickStartedAt, picks.filter(p => p.status === 'waiting').length, draft?.status, draft?.joinedUsers]);
+    run().catch(err => console.error('Timer run failed:', err));
+    return () => { cancelled = true; if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } };
+  }, [draft?.currentPick, draft?.pickStartedAt, waitingPickCount, draft?.status, draft?.joinedUsers]);
 
   useEffect(() => {
     if (!draft || draft.status !== 'scheduled' || !draft.scheduledTime) {
@@ -366,8 +396,8 @@ export default function LeagueDraft() {
       let batch = writeBatch(db);
       let opCount = 0;
       for (const p of players) {
-        const ref = doc(collection(db, 'leagues', id, 'drafts', dId, 'players'), p.id || p.firestoreId || uid());
-        batch.set(ref, p);
+        const ref = doc(collection(db, 'leagues', id, 'drafts', dId, 'players'), p.playerId || p.id || p.firestoreId || uid());
+        batch.set(ref, { ...p, id: p.playerId || p.id || uid() });
         opCount++;
         if (opCount >= 500) {
           await batch.commit();
@@ -434,8 +464,8 @@ export default function LeagueDraft() {
         let poolBatch = writeBatch(db);
         let poolCount = 0;
         for (const p of players) {
-          const ref = doc(collection(db, 'leagues', id, 'drafts', dId, 'players'), p.id || p.firestoreId || uid());
-          poolBatch.set(ref, p);
+          const ref = doc(collection(db, 'leagues', id, 'drafts', dId, 'players'), p.playerId || p.id || p.firestoreId || uid());
+          poolBatch.set(ref, { ...p, id: p.playerId || p.id || uid() });
           poolCount++;
           if (poolCount >= 500) {
             await poolBatch.commit();
@@ -472,120 +502,135 @@ export default function LeagueDraft() {
   };
 
   const handlePick = async (player) => {
-    if (!draft || !player) return;
-    const currentPick = picks.find(p => p.order === draft.currentPick);
-    if (!currentPick) return;
-
-    const pickId = currentPick.id;
-    await updateDoc(draftPickDoc(id, draft.id, pickId), {
-      playerId: player.id,
-      playerName: `${player.firstName} ${player.lastName}`,
-      playerData: { ...player },
-      status: 'picked',
-      pickedAt: new Date().toISOString(),
-    });
-
+    if (!draft || !player || pickInProgress.current) return;
+    pickInProgress.current = true;
     try {
-      await deleteDoc(doc(db, 'leagues', id, 'drafts', draft.id, 'players', player.firestoreId || player.id));
-    } catch (e) {}
+      const currentPick = picks.find(p => p.order === draft.currentPick);
+      if (!currentPick) return;
 
-    const draftSnap = await getDoc(draftDoc(id, draft.id));
-    const freshDraft = draftSnap.data();
-    const realTotalPicks = teams.length * (freshDraft?.totalRounds || 2);
-    const nextPick = (freshDraft?.currentPick || draft.currentPick) + 1;
-    if (nextPick > realTotalPicks) {
-      await updateDoc(draftDoc(id, draft.id), {
-        status: 'completed',
-        currentPick: nextPick,
-        completedAt: new Date().toISOString(),
+      const pickId = currentPick.id;
+
+      const pickSnap = await getDoc(draftPickDoc(id, draft.id, pickId));
+      if (pickSnap.data()?.status !== 'waiting') return;
+
+      await updateDoc(draftPickDoc(id, draft.id, pickId), {
+        playerId: player.playerId || player.id,
+        playerName: `${player.firstName} ${player.lastName}`,
+        playerData: { ...player },
+        status: 'picked',
+        pickedAt: new Date().toISOString(),
       });
-      await saveDraftedPlayers();
-    } else {
-      await updateDoc(draftDoc(id, draft.id), {
-        currentPick: nextPick,
-        pickStartedAt: new Date().toISOString(),
-      });
+
+      try {
+        await deleteDoc(doc(db, 'leagues', id, 'drafts', draft.id, 'players', player.firestoreId || player.playerId || player.id));
+      } catch (e) {}
+
+      const draftSnap = await getDoc(draftDoc(id, draft.id));
+      const freshDraft = draftSnap.data();
+      const teamSnap = await getDocs(query(teamsCol(), where('leagueId', '==', id)));
+      const realTotalPicks = teamSnap.size * (freshDraft?.totalRounds || 2);
+      const nextPick = (freshDraft?.currentPick || draft.currentPick) + 1;
+      if (nextPick > realTotalPicks) {
+        await updateDoc(draftDoc(id, draft.id), {
+          status: 'completed',
+          currentPick: nextPick,
+          completedAt: new Date().toISOString(),
+        });
+        await saveDraftedPlayers();
+      } else {
+        await updateDoc(draftDoc(id, draft.id), {
+          currentPick: nextPick,
+          pickStartedAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.error('handlePick failed:', err);
+    } finally {
+      pickInProgress.current = false;
     }
   };
 
   const handleAutoPick = async () => {
-    if (!draft) return;
-
-    // Step 1: Read the CURRENT draft state directly from Firestore (no stale data)
-    const draftSnap = await getDoc(draftDoc(id, draft.id));
-    if (!draftSnap.exists()) return;
-    const freshDraft = draftSnap.data();
-
-    // Step 2: Read the current pick directly from Firestore
-    const picksSnap = await getDocs(query(draftPicksCol(id, draft.id), orderBy('order')));
-    const currentPick = picksSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .find(p => p.order === freshDraft.currentPick);
-
-    // Step 3: If pick is already completed or missing, bail out silently
-    if (!currentPick || currentPick.status !== 'waiting') return;
-
-    // Step 4: Find the team for this pick from Firestore (use local teams as fallback)
-    const team = teams.find(t => t.id === currentPick.teamId);
-    if (!team) return;
-
-    // Step 5: Get the team's existing roster for position analysis
-    let roster = team.players || [];
-    if (!roster.length) {
-      const pSnap = await getDocs(teamPlayersCol(team.id));
-      roster = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-    }
-
-    // Step 6: Get available players from Firestore
-    const availSnap = await getDocs(collection(db, 'leagues', id, 'drafts', draft.id, 'players'));
-    const avail = availSnap.docs.map(d => ({ ...d.data(), firestoreId: d.id }));
-
-    // Step 7: If no players remain, complete the draft
-    if (avail.length === 0) {
-      await updateDoc(draftDoc(id, draft.id), {
-        status: 'completed',
-        completedAt: new Date().toISOString(),
-      });
-      await saveDraftedPlayers();
-      return;
-    }
-
-    // Step 8: Pick the best player for the weakest position
-    const best = findWeakestPosition(roster, avail);
-    if (!best) return;
-
-    // Step 9: Update the draft pick document
-    const pickId = currentPick.id;
-    await updateDoc(draftPickDoc(id, draft.id, pickId), {
-      playerId: best.id,
-      playerName: `${best.firstName} ${best.lastName}`,
-      playerData: { ...best },
-      status: 'auto',
-      pickedAt: new Date().toISOString(),
-    });
-
-    // Step 10: Remove the drafted player from the pool
+    if (!draft || autoPickInProgress.current) return;
+    autoPickInProgress.current = true;
     try {
-      await deleteDoc(doc(db, 'leagues', id, 'drafts', draft.id, 'players', best.firestoreId || best.id));
-    } catch (e) {}
+      const draftSnap = await getDoc(draftDoc(id, draft.id));
+      if (!draftSnap.exists()) return;
+      const freshDraft = draftSnap.data();
 
-    // Step 11: Re-read draft state to calculate the real total picks and advance
-    const draftSnap2 = await getDoc(draftDoc(id, draft.id));
-    const freshDraft2 = draftSnap2.data();
-    const realTotalPicks = teams.length * (freshDraft2?.totalRounds || 2);
-    const nextPick = (freshDraft2?.currentPick || draft.currentPick) + 1;
-    if (nextPick > realTotalPicks) {
-      await updateDoc(draftDoc(id, draft.id), {
-        status: 'completed',
-        currentPick: nextPick,
-        completedAt: new Date().toISOString(),
+      const picksSnap = await getDocs(query(draftPicksCol(id, draft.id), orderBy('order')));
+      const currentPick = picksSnap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .find(p => p.order === freshDraft.currentPick);
+
+      if (!currentPick || currentPick.status !== 'waiting') return;
+
+      const teamSnap = await getDocs(query(teamsCol(), where('leagueId', '==', id)));
+      const allTeams = teamSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const team = allTeams.find(t => t.id === currentPick.teamId);
+      if (!team) {
+        console.error('Auto-pick: team not found for pick', currentPick.order, 'teamId:', currentPick.teamId);
+        return;
+      }
+
+      let roster = team.players || [];
+      if (!roster.length) {
+        const pSnap = await getDocs(teamPlayersCol(team.id));
+        roster = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+
+      const availSnap = await getDocs(collection(db, 'leagues', id, 'drafts', draft.id, 'players'));
+      const avail = availSnap.docs.map(d => ({ ...d.data(), firestoreId: d.id }));
+
+      if (avail.length === 0) {
+        await updateDoc(draftDoc(id, draft.id), {
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+        });
+        await saveDraftedPlayers();
+        return;
+      }
+
+      const best = findWeakestPosition(roster, avail);
+      if (!best) {
+        console.error('Auto-pick: findWeakestPosition returned null');
+        return;
+      }
+
+      const pickId = currentPick.id;
+      await updateDoc(draftPickDoc(id, draft.id, pickId), {
+        playerId: best.playerId || best.id,
+        playerName: `${best.firstName} ${best.lastName}`,
+        playerData: { ...best },
+        status: 'auto',
+        pickedAt: new Date().toISOString(),
       });
-      await saveDraftedPlayers();
-    } else {
-      await updateDoc(draftDoc(id, draft.id), {
-        currentPick: nextPick,
-        pickStartedAt: new Date().toISOString(),
-      });
+
+      try {
+        await deleteDoc(doc(db, 'leagues', id, 'drafts', draft.id, 'players', best.firestoreId || best.playerId || best.id));
+      } catch (e) {}
+
+      const draftSnap2 = await getDoc(draftDoc(id, draft.id));
+      const freshDraft2 = draftSnap2.data();
+      const realTotalPicks = allTeams.length * (freshDraft2?.totalRounds || 2);
+      const nextPick = (freshDraft2?.currentPick || draft.currentPick) + 1;
+      if (nextPick > realTotalPicks) {
+        await updateDoc(draftDoc(id, draft.id), {
+          status: 'completed',
+          currentPick: nextPick,
+          completedAt: new Date().toISOString(),
+        });
+        await saveDraftedPlayers();
+      } else {
+        await updateDoc(draftDoc(id, draft.id), {
+          currentPick: nextPick,
+          pickStartedAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.error('handleAutoPick failed:', err);
+    } finally {
+      autoPickInProgress.current = false;
     }
   };
 
@@ -643,7 +688,7 @@ export default function LeagueDraft() {
   const currentPick = picks.find(p => p.order === draft?.currentPick);
   const isMyTurn = currentPick && userTeam && currentPick.teamId === userTeam.id;
   const draftedIds = picks.filter(p => p.status === 'picked' || p.status === 'auto').map(p => p.playerId);
-  const undraftedPlayers = availablePlayers.filter(p => !draftedIds.includes(p.id));
+  const undraftedPlayers = availablePlayers.filter(p => !draftedIds.includes(p.playerId || p.id));
   const computedTotalPicks = teams.length * (draft?.totalRounds || 2);
 
   if (loading) return (
@@ -724,7 +769,7 @@ export default function LeagueDraft() {
           <h3 className="font-display text-base tracking-wider">Scouting &mdash; Player Pool</h3>
           <div className="space-y-1 max-h-[400px] overflow-y-auto">
             {undraftedPlayers.sort((a, b) => (b.overall || 0) - (a.overall || 0)).map((p, i) => (
-              <div key={p.id} className="glass-card p-3 flex items-center gap-3 transition-all duration-200" style={{animationDelay: `${i * 0.02}s`}}>
+              <div key={p.playerId || p.id} className="glass-card p-3 flex items-center gap-3 transition-all duration-200" style={{animationDelay: `${i * 0.02}s`}}>
                 <div className="rating-circle rating-circle-sm" style={{'--pct': `${p.overall || 50}%`}}>
                   <span className="text-white text-xs">{p.overall || '-'}</span>
                 </div>
@@ -858,10 +903,38 @@ export default function LeagueDraft() {
       )}
 
       <div className="space-y-2 animate-slide-up">
-        <h3 className="font-display text-base tracking-wider">Available Players</h3>
-        <div className="space-y-1 max-h-[320px] overflow-y-auto">
-          {undraftedPlayers.sort((a, b) => (b.overall || 0) - (a.overall || 0)).slice(0, 15).map((p, i) => (
-            <div key={p.id}
+        <h3 className="font-display text-base tracking-wider">Available Players ({undraftedPlayers.length})</h3>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Search players..."
+            value={playerSearch}
+            onChange={e => setPlayerSearch(e.target.value)}
+            className="flex-1 bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-orange)]"
+          />
+          <select
+            value={playerPosFilter}
+            onChange={e => setPlayerPosFilter(e.target.value)}
+            className="bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[var(--accent-orange)]"
+          >
+            <option value="">All</option>
+            {POSITIONS.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+          </select>
+        </div>
+        <div className="space-y-1 max-h-[400px] overflow-y-auto">
+          {undraftedPlayers
+            .filter(p => {
+              if (playerSearch) {
+                const q = playerSearch.toLowerCase();
+                const name = `${p.firstName || ''} ${p.lastName || ''}`.toLowerCase();
+                if (!name.includes(q)) return false;
+              }
+              if (playerPosFilter && (p.primaryPosition || p.position) !== playerPosFilter) return false;
+              return true;
+            })
+            .sort((a, b) => (b.overall || 0) - (a.overall || 0))
+            .map((p, i) => (
+            <div key={p.playerId || p.id}
               className={`glass-card p-3 flex items-center gap-2 transition-all duration-200 ${
                 isMyTurn && currentPick?.status === 'waiting' ? 'cursor-pointer hover:bg-[var(--bg-tertiary)]' : ''
               }`}
@@ -916,6 +989,37 @@ export default function LeagueDraft() {
           )}
         </div>
       </div>
+
+      {userTeam && (
+        <div className="glass-card p-4 animate-slide-up">
+          <h3 className="font-display text-base tracking-wider mb-3">Your Roster — {userTeam.name}</h3>
+          <div className="space-y-1 max-h-[250px] overflow-y-auto">
+            {(() => {
+              const existingPlayers = (userTeam.players || []).map(p => ({ ...p, source: 'roster' }));
+              const draftedByMe = picks
+                .filter(p => (p.status === 'picked' || p.status === 'auto') && p.teamId === userTeam.id)
+                .map(p => ({ ...(p.playerData || {}), name: p.playerName, source: p.status === 'auto' ? 'auto-pick' : 'draft-pick', overall: p.playerData?.overall }));
+              const merged = [...existingPlayers, ...draftedByMe];
+              if (merged.length === 0) {
+                return <p className="text-xs text-[var(--text-tertiary)] text-center py-4">No players yet</p>;
+              }
+              return merged.map((p, i) => (
+                <div key={p.playerId || p.id || i} className="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-[var(--bg-secondary)]/50 text-xs">
+                  <div className="rating-circle rating-circle-sm shrink-0" style={{'--pct': `${p.overall || 50}%`}}>
+                    <span className="text-white text-[10px]">{p.overall || '-'}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{p.name || `${p.firstName || ''} ${p.lastName || ''}`}</p>
+                    <p className="text-[var(--text-tertiary)]">{p.primaryPosition || p.position || '—'}</p>
+                  </div>
+                  {p.source === 'draft-pick' && <span className="text-[10px] text-green-400 bg-green-500/20 px-1.5 py-0.5 rounded">DRAFTED</span>}
+                  {p.source === 'auto-pick' && <span className="text-[10px] text-yellow-400 bg-yellow-500/20 px-1.5 py-0.5 rounded">AUTO</span>}
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
   };
