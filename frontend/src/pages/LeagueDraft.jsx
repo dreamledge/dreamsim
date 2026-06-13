@@ -90,15 +90,17 @@ function generateLotteryOrder(teamList) {
     const winner = remainingCombinations[winnerIndex];
     drawn.push(winner);
 
-    remainingCombinations.splice(
-      remainingCombinations.findIndex(t => t.id === winner.id),
-      1
-    );
+    for (let i = remainingCombinations.length - 1; i >= 0; i--) {
+      if (remainingCombinations[i].id === winner.id) {
+        remainingCombinations.splice(i, 1);
+      }
+    }
 
-    lotteryTeams.splice(lotteryTeams.findIndex(t => t.id === winner.id), 1);
+    const lotteryIdx = lotteryTeams.findIndex(t => t.id === winner.id);
+    if (lotteryIdx !== -1) lotteryTeams.splice(lotteryIdx, 1);
   }
 
-  const remainingLottery = lotteryTeams;
+  const remainingLottery = lotteryTeams.reverse();
 
   return [...drawn, ...remainingLottery, ...nonLotteryTeams];
 }
