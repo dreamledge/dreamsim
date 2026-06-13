@@ -362,7 +362,7 @@ export default function LeagueDraft() {
 
     try {
       const count = totalRounds > 3 ? getPoolSize() : totalPicks;
-      const players = await generateAvailablePlayers(count, totalRounds <= 2);
+      const players = await generateAvailablePlayers(count, totalRounds > 3);
       let batch = writeBatch(db);
       let opCount = 0;
       for (const p of players) {
@@ -430,7 +430,7 @@ export default function LeagueDraft() {
       const pSnap = await getDocs(collection(db, 'leagues', id, 'drafts', dId, 'players'));
       if (pSnap.empty) {
         const count = totalRounds > 3 ? getPoolSize() : totalPicks;
-        const players = await generateAvailablePlayers(count, totalRounds <= 2);
+        const players = await generateAvailablePlayers(count, totalRounds > 3);
         let poolBatch = writeBatch(db);
         let poolCount = 0;
         for (const p of players) {

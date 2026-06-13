@@ -527,7 +527,7 @@ const FIRST_NAMES = [
   'Jabari', 'Chet', 'Paolo', 'Keegan', 'Bennedict', 'Jaden', 'Walker',
   'Dyson', 'Tari', 'MarJon', 'Christian', 'Kennedy', 'Ayo', 'Tre',
   'Davion', 'James', 'Jonathan', 'Usman', 'Day\'Ron', 'Quentin', 'Herbert',
-  'Santi', 'Xavier', 'Trey', 'Keon', 'Jalen', 'Caris', 'Deni', 'Patrick',
+  'Santi', 'Xavier', 'Trey', 'Keon', 'Javonte', 'Caris', 'Deni', 'Patrick',
 ];
 
 const LAST_NAMES = [
@@ -536,7 +536,7 @@ const LAST_NAMES = [
   'Young', 'Allen', 'King', 'Wright', 'Scott', 'Hill', 'Barnes',
   'Adams', 'Nelson', 'Mitchell', 'Roberts', 'Carter', 'Phillips', 'Evans',
   'Turner', 'Torres', 'Parker', 'Collins', 'Edwards', 'Stewart', 'Flores',
-  'Morris', 'Nguyen', 'Murphy', 'Rivera', 'Cook', 'Rogers', 'Morgan',
+  'Brooks', 'Nguyen', 'Murphy', 'Rivera', 'Cook', 'Rogers', 'Morgan',
   'Peterson', 'Cooper', 'Reed', 'Bailey', 'Bell', 'Gomez', 'Kelly',
   'Howard', 'Ward', 'Cox', 'Diaz', 'Richardson', 'Wood', 'Watson',
 ];
